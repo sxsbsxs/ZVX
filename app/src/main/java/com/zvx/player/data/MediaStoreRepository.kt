@@ -2,6 +2,7 @@ package com.zvx.player.data
 
 import android.content.ContentUris
 import android.content.Context
+import android.os.Build
 import android.provider.MediaStore
 
 object MediaStoreRepository {
@@ -19,17 +20,19 @@ object MediaStoreRepository {
     private fun queryVideos(context: Context): List<MediaEntry> {
         val resolver = context.contentResolver
         val collection = MediaStore.Video.Media.EXTERNAL_CONTENT_URI
-        val projection = arrayOf(
-            MediaStore.Video.Media._ID,
-            MediaStore.Video.Media.DISPLAY_NAME,
-            MediaStore.Video.Media.TITLE,
-            MediaStore.Video.Media.MIME_TYPE,
-            MediaStore.Video.Media.DURATION,
-            MediaStore.Video.Media.SIZE,
-            MediaStore.Video.Media.DATE_ADDED,
-            MediaStore.Video.Media.WIDTH,
-            MediaStore.Video.Media.HEIGHT
-        )
+        val projection = buildList {
+            add(MediaStore.Video.Media._ID)
+            add(MediaStore.Video.Media.DISPLAY_NAME)
+            add(MediaStore.Video.Media.TITLE)
+            add(MediaStore.Video.Media.MIME_TYPE)
+            add(MediaStore.Video.Media.DURATION)
+            add(MediaStore.Video.Media.SIZE)
+            add(MediaStore.Video.Media.DATE_ADDED)
+            if (Build.VERSION.SDK_INT >= 29) {
+                add(MediaStore.Video.Media.WIDTH)
+                add(MediaStore.Video.Media.HEIGHT)
+            }
+        }.toTypedArray()
         val result = ArrayList<MediaEntry>()
 
         resolver.query(collection, projection, null, null, MediaStore.Video.Media.DATE_ADDED + " DESC")?.use { cursor ->
