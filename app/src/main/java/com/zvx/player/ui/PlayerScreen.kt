@@ -81,10 +81,10 @@ fun PlayerScreen(
     val savedPosition = remember(videoUri) {
         PlaybackProgressStore.getPosition(context, videoUri.toString())
     }
-    var resumeApplied by remember(videoUri) { mutableStateOf(false) }
     val player = remember(videoUri) {
         ExoPlayer.Builder(context).build().apply {
-            setMediaItem(MediaItem.fromUri(videoUri))
+            val startPosition = savedPosition.takeIf { it >= 5_000L } ?: C.TIME_UNSET
+            setMediaItem(MediaItem.fromUri(videoUri), startPosition)
             playWhenReady = true
             prepare()
         }
@@ -154,19 +154,6 @@ fun PlayerScreen(
         val listener = object : Player.Listener {
             override fun onIsPlayingChanged(playing: Boolean) {
                 isPlaying = playing
-            }
-
-            override fun onPlaybackStateChanged(playbackState: Int) {
-                if (playbackState == Player.STATE_READY && !resumeApplied) {
-                    resumeApplied = true
-                    val totalDuration = player.duration
-                    val canResume = savedPosition >= 5_000L &&
-                        (totalDuration <= 0L || savedPosition < totalDuration - 10_000L)
-                    if (canResume) {
-                        player.seekTo(savedPosition)
-                        currentPosition = savedPosition
-                    }
-                }
             }
 
             override fun onTracksChanged(tracks: Tracks) {

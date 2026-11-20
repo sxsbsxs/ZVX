@@ -19,7 +19,7 @@ object PlaybackProgressStore {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val safePosition = positionMs.coerceAtLeast(0L)
         val finished = durationMs > 0L && safePosition >= (durationMs - 10_000L).coerceAtLeast(0L)
-        if (safePosition < 5_000L || finished) {
+        if (safePosition < 5_000L || durationMs <= 0L || finished) {
             prefs.edit().remove(key(uri)).apply()
         } else {
             prefs.edit().putLong(key(uri), safePosition).apply()
