@@ -19,5 +19,6 @@ data class MediaEntry(
     val height: Int? = null,
     val artist: String? = null,
     val album: String? = null,
+    val folderName: String = "Other",
     val kind: MediaKind
 )

@@ -31,6 +31,7 @@ object MediaStoreRepository {
             if (Build.VERSION.SDK_INT >= 29) {
                 add(MediaStore.Video.Media.WIDTH)
                 add(MediaStore.Video.Media.HEIGHT)
+                add(MediaStore.MediaColumns.BUCKET_DISPLAY_NAME)
             }
         }.toTypedArray()
         val result = ArrayList<MediaEntry>()
@@ -62,6 +63,9 @@ object MediaStoreRepository {
                     dateAddedSeconds = cursor.readLongOrZero(dateColumn),
                     width = cursor.readIntOrNull(widthColumn),
                     height = cursor.readIntOrNull(heightColumn),
+                    folderName = if (Build.VERSION.SDK_INT >= 29) {
+                        cursor.readString(cursor.getColumnIndex(MediaStore.MediaColumns.BUCKET_DISPLAY_NAME)) ?: "Other"
+                    } else "Other",
                     kind = MediaKind.VIDEO
                 )
             }
@@ -82,7 +86,9 @@ object MediaStoreRepository {
             MediaStore.Audio.Media.DATE_ADDED,
             MediaStore.Audio.Media.ARTIST,
             MediaStore.Audio.Media.ALBUM
-        )
+        ).let { base ->
+            if (Build.VERSION.SDK_INT >= 29) base + MediaStore.MediaColumns.BUCKET_DISPLAY_NAME else base
+        }
         val result = ArrayList<MediaEntry>()
 
         resolver.query(collection, projection, null, null, MediaStore.Audio.Media.DATE_ADDED + " DESC")?.use { cursor ->
@@ -112,6 +118,9 @@ object MediaStoreRepository {
                     dateAddedSeconds = cursor.readLongOrZero(dateColumn),
                     artist = cursor.readString(artistColumn),
                     album = cursor.readString(albumColumn),
+                    folderName = if (Build.VERSION.SDK_INT >= 29) {
+                        cursor.readString(cursor.getColumnIndex(MediaStore.MediaColumns.BUCKET_DISPLAY_NAME)) ?: "Other"
+                    } else "Other",
                     kind = MediaKind.AUDIO
                 )
             }

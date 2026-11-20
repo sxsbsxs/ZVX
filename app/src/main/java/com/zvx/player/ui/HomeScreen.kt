@@ -1,9 +1,15 @@
 package com.zvx.player.ui
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.media.MediaMetadataRetriever
 import android.net.Uri
+import android.os.Build
+import android.util.Size
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
@@ -57,6 +63,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -80,6 +88,10 @@ private enum class LibraryFilter(val label: String) {
     ALL("All"), VIDEO("Videos"), AUDIO("Audio"), RECENT("Recent")
 }
 
+private enum class LibrarySort(val label: String) {
+    NEWEST("Newest first"), NAME("Name"), LONGEST("Longest"), LARGEST("Largest")
+}
+
 @Composable
 fun HomeScreen(
     modifier: Modifier = Modifier,
@@ -93,6 +105,9 @@ fun HomeScreen(
     var recentUris by remember { mutableStateOf(PlaybackHistoryStore.getRecent(context)) }
     var searchText by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf(LibraryFilter.ALL) }
+    var selectedFolder by remember { mutableStateOf("All folders") }
+    var selectedSort by remember { mutableStateOf(LibrarySort.NEWEST) }
+    var showSortDialog by remember { mutableStateOf(false) }
     var showStreamDialog by remember { mutableStateOf(false) }
     var reloadToken by remember { mutableIntStateOf(0) }
     var isLoading by remember { mutableStateOf(false) }
@@ -118,6 +133,8 @@ fun HomeScreen(
         }
     }
 
+    val folders = media.map { it.folderName }.filter { it.isNotBlank() }
+        .distinct().sortedBy { it.lowercase() }
     val query = searchText.trim().lowercase()
     val visibleMedia = media.filter { entry ->
         val matchesFilter = when (selectedFilter) {
@@ -131,13 +148,19 @@ fun HomeScreen(
             entry.artist.orEmpty().lowercase().contains(query) ||
             entry.album.orEmpty().lowercase().contains(query) ||
             entry.displayName.lowercase().contains(query)
-        matchesFilter && matchesSearch
+        val matchesFolder = selectedFolder == "All folders" || entry.folderName == selectedFolder
+        matchesFilter && matchesSearch && matchesFolder
     }.let { filtered ->
         if (selectedFilter == LibraryFilter.RECENT) {
             val order = recentUris.withIndex().associate { it.value to it.index }
             filtered.sortedBy { order[it.uri.toString()] ?: Int.MAX_VALUE }
         } else {
-            filtered
+            when (selectedSort) {
+                LibrarySort.NEWEST -> filtered.sortedByDescending { it.dateAddedSeconds }
+                LibrarySort.NAME -> filtered.sortedBy { it.title.lowercase() }
+                LibrarySort.LONGEST -> filtered.sortedByDescending { it.durationMs }
+                LibrarySort.LARGEST -> filtered.sortedByDescending { it.sizeBytes }
+            }
         }
     }
 
@@ -212,6 +235,39 @@ fun HomeScreen(
                         )
                     }
                 }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FilterChip(
+                        selected = selectedFolder == "All folders",
+                        onClick = { selectedFolder = "All folders" },
+                        label = { Text("All folders") }
+                    )
+                    folders.forEach { folder ->
+                        FilterChip(
+                            selected = selectedFolder == folder,
+                            onClick = { selectedFolder = folder },
+                            label = { Text(folder) }
+                        )
+                    }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        visibleMedia.size.toString() + " items",
+                        color = ZvxMuted,
+                        fontSize = 11.sp,
+                        modifier = Modifier.weight(1f)
+                    )
+                    TextButton(onClick = { showSortDialog = true }) {
+                        Text("Sort · " + selectedSort.label, color = ZvxAccent, fontSize = 12.sp)
+                    }
+                }
             }
 
             if (!access.hasAny || !access.hasAudio || !access.hasVideo) {
@@ -254,6 +310,41 @@ fun HomeScreen(
                 }
             }
         }
+    }
+
+    if (showSortDialog) {
+        AlertDialog(
+            onDismissRequest = { showSortDialog = false },
+            title = { Text("Sort library", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    LibrarySort.entries.forEach { sort ->
+                        TextButton(
+                            onClick = {
+                                selectedSort = sort
+                                showSortDialog = false
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                sort.label,
+                                color = if (selectedSort == sort) ZvxAccent else ZvxText,
+                                modifier = Modifier.weight(1f)
+                            )
+                            if (selectedSort == sort) {
+                                Icon(Icons.Default.PlayArrow, contentDescription = "Selected", tint = ZvxAccent)
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showSortDialog = false }) { Text("Done") }
+            },
+            containerColor = ZvxSurface,
+            titleContentColor = ZvxText,
+            textContentColor = ZvxMuted
+        )
     }
 
     if (showStreamDialog) {
@@ -376,34 +467,80 @@ private fun MediaRow(entry: MediaEntry, onClick: () -> Unit) {
         color = ZvxSurface
     ) {
         Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier.size(58.dp).clip(RoundedCornerShape(14.dp)).background(
-                    Brush.linearGradient(
-                        if (entry.kind == MediaKind.AUDIO) listOf(Color(0xFF34304B), Color(0xFF202331))
-                        else listOf(Color(0xFF34402A), Color(0xFF202921))
-                    )
-                ),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = if (entry.kind == MediaKind.AUDIO) Icons.Default.AudioFile else Icons.Default.Movie,
-                    contentDescription = null,
-                    tint = ZvxAccent,
-                    modifier = Modifier.size(28.dp)
-                )
-            }
-
+            MediaThumbnail(entry = entry, modifier = Modifier.size(62.dp))
             Spacer(Modifier.width(13.dp))
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(entry.title, color = ZvxText, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(entry.subtitleLine(), color = ZvxMuted, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(
-                    formatDuration(entry.durationMs) + "  ·  " + formatBytes(entry.sizeBytes),
+                    entry.folderName + "  ·  " + formatDuration(entry.durationMs) + "  ·  " + formatBytes(entry.sizeBytes),
                     color = ZvxMuted.copy(alpha = 0.72f),
-                    fontSize = 10.sp
+                    fontSize = 10.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
             Icon(Icons.Default.PlayArrow, contentDescription = "Play", tint = ZvxAccent, modifier = Modifier.padding(start = 8.dp).size(24.dp))
+        }
+    }
+}
+
+@Composable
+private fun MediaThumbnail(entry: MediaEntry, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    var bitmap by remember(entry.uri) { mutableStateOf<Bitmap?>(null) }
+
+    LaunchedEffect(entry.uri) {
+        bitmap = kotlinx.coroutines.withContext(Dispatchers.IO) {
+            runCatching {
+                if (entry.kind == MediaKind.VIDEO && Build.VERSION.SDK_INT >= 29) {
+                    context.contentResolver.loadThumbnail(entry.uri, Size(192, 192), null)
+                } else if (entry.kind == MediaKind.AUDIO) {
+                    val retriever = MediaMetadataRetriever()
+                    try {
+                        retriever.setDataSource(context, entry.uri)
+                        val bytes = retriever.embeddedPicture
+                        if (bytes != null) {
+                            BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                        } else {
+                            null
+                        }
+                    } finally {
+                        retriever.release()
+                    }
+                } else {
+                    null
+                }
+            }.getOrNull()
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(
+                Brush.linearGradient(
+                    if (entry.kind == MediaKind.AUDIO) listOf(Color(0xFF34304B), Color(0xFF202331))
+                    else listOf(Color(0xFF34402A), Color(0xFF202921))
+                )
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        val loaded = bitmap
+        if (loaded != null) {
+            Image(
+                bitmap = loaded.asImageBitmap(),
+                contentDescription = entry.title,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+        } else {
+            Icon(
+                imageVector = if (entry.kind == MediaKind.AUDIO) Icons.Default.AudioFile else Icons.Default.Movie,
+                contentDescription = null,
+                tint = ZvxAccent,
+                modifier = Modifier.size(28.dp)
+            )
         }
     }
 }

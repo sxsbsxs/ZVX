@@ -67,6 +67,7 @@ import androidx.media3.common.Tracks
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
+import com.zvx.player.data.PlaybackProgressStore
 import kotlinx.coroutines.delay
 
 @Composable
@@ -77,6 +78,10 @@ fun PlayerScreen(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
+    val savedPosition = remember(videoUri) {
+        PlaybackProgressStore.getPosition(context, videoUri.toString())
+    }
+    var resumeApplied by remember(videoUri) { mutableStateOf(false) }
     val player = remember(videoUri) {
         ExoPlayer.Builder(context).build().apply {
             setMediaItem(MediaItem.fromUri(videoUri))
@@ -151,6 +156,19 @@ fun PlayerScreen(
                 isPlaying = playing
             }
 
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                if (playbackState == Player.STATE_READY && !resumeApplied) {
+                    resumeApplied = true
+                    val totalDuration = player.duration
+                    val canResume = savedPosition >= 5_000L &&
+                        (totalDuration <= 0L || savedPosition < totalDuration - 10_000L)
+                    if (canResume) {
+                        player.seekTo(savedPosition)
+                        currentPosition = savedPosition
+                    }
+                }
+            }
+
             override fun onTracksChanged(tracks: Tracks) {
                 availableTracks = tracks
             }
@@ -163,6 +181,12 @@ fun PlayerScreen(
         player.addListener(listener)
         onDispose {
             player.removeListener(listener)
+            PlaybackProgressStore.save(
+                context,
+                videoUri.toString(),
+                player.currentPosition,
+                player.duration.takeIf { it != C.TIME_UNSET } ?: 0L
+            )
             player.release()
         }
     }
@@ -173,7 +197,13 @@ fun PlayerScreen(
             val playerDuration = player.duration
             duration = if (playerDuration == C.TIME_UNSET) 0L else playerDuration.coerceAtLeast(0L)
             isPlaying = player.isPlaying
-            delay(250L)
+            PlaybackProgressStore.save(
+                context,
+                videoUri.toString(),
+                player.currentPosition,
+                player.duration.takeIf { it != C.TIME_UNSET } ?: 0L
+            )
+            delay(5_000L)
         }
     }
 
