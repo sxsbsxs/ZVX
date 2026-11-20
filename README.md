@@ -1,6 +1,6 @@
 # ZVX
 
-A clean, modern Android video player built with Kotlin, Jetpack Compose and AndroidX Media3.
+A clean, modern Android media player with a modular multi-language foundation.
 
 ## Included in this foundation
 
@@ -15,24 +15,32 @@ A clean, modern Android video player built with Kotlin, Jetpack Compose and Andr
 - Play, pause, seek, skip ±10 seconds and change playback speed (0.75×–2×).
 - Switch between supported embedded audio tracks and subtitle tracks.
 - Disable embedded subtitles or load an external SRT, VTT, TTML, SSA or ASS subtitle file.
-- An original dark ZVX interface.
-- GitHub Actions workflow that builds and uploads a debug APK.
+- Original dark ZVX interface and GitHub Actions debug APK build.
 
-Codec and container support depends on the Android device and source stream. A file extension alone cannot guarantee that a device can decode a file.
+## Language responsibilities
 
-## Stack
+| Language | Responsibility | Runtime |
+|---|---|---|
+| Kotlin | Android app, Compose UI, library and playback orchestration | Android |
+| Java | Android platform interoperability bridge and native API boundary | Android |
+| C++17 | Small JNI native core for low-level media utilities; designed to grow into optimized native processing | Android NDK |
+| Python 3 | Repository validation and developer/CI tooling; not bundled into the APK | Development / CI |
 
-- Kotlin
-- Jetpack Compose + Material 3
-- AndroidX Media3 / ExoPlayer 1.11.1
-- Gradle Kotlin DSL
-- GitHub Actions
+The native C++ layer is intentionally small at this stage. Media decoding and playback remain on AndroidX Media3; adding C++ does not magically add codecs or replace the playback engine. Future native components should be introduced only where profiling or a concrete feature justifies them.
 
 ## Build
 
-Open the repository in Android Studio, use JDK 17 and install Android SDK Platform 36. Allow Gradle to sync, then run the app configuration on a device or emulator.
+Use JDK 17, Android SDK Platform 36, Android NDK 27.2.12479018 and CMake 3.22.1. Open the repository in Android Studio and sync Gradle.
 
-With Gradle 8.13 installed, run `gradle assembleDebug` . The APK is written to app/build/outputs/apk/debug/app-debug.apk.
+Build the Android app with:
+
+`gradle assembleDebug`
+
+Run the Python repository checks with:
+
+`python3 -m unittest discover -s tools/tests -v`
+
+The APK is written to `app/build/outputs/apk/debug/app-debug.apk`.
 
 ## Network security
 
