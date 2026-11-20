@@ -9,7 +9,8 @@ A clean, modern Android video player built with Kotlin, Jetpack Compose and Andr
 - HLS and MPEG-DASH streaming through Media3 modules.
 - Progressive playback for common media containers when a device has a compatible decoder.
 - Play, pause, seek, skip ±10 seconds and change playback speed (0.75×–2×).
-- Embedded subtitle and audio tracks exposed by Media3.
+- Switch between supported embedded audio tracks and subtitle tracks.
+- Disable embedded subtitles or load an external SRT, VTT, TTML, SSA or ASS subtitle file.
 - An original dark ZVX interface.
 - GitHub Actions workflow that builds and uploads a debug APK.
 
