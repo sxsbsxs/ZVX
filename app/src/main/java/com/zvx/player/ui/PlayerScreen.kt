@@ -168,12 +168,15 @@ fun PlayerScreen(
         player.addListener(listener)
         onDispose {
             player.removeListener(listener)
-            PlaybackProgressStore.save(
-                context,
-                videoUri.toString(),
-                player.currentPosition,
-                player.duration.takeIf { it != C.TIME_UNSET } ?: 0L
-            )
+            val finalDuration = player.duration
+            if (finalDuration > 0L && finalDuration != C.TIME_UNSET) {
+                PlaybackProgressStore.save(
+                    context,
+                    videoUri.toString(),
+                    player.currentPosition,
+                    finalDuration
+                )
+            }
             player.release()
         }
     }
@@ -184,12 +187,15 @@ fun PlayerScreen(
             val playerDuration = player.duration
             duration = if (playerDuration == C.TIME_UNSET) 0L else playerDuration.coerceAtLeast(0L)
             isPlaying = player.isPlaying
-            PlaybackProgressStore.save(
-                context,
-                videoUri.toString(),
-                player.currentPosition,
-                player.duration.takeIf { it != C.TIME_UNSET } ?: 0L
-            )
+            val currentDuration = player.duration
+            if (currentDuration > 0L && currentDuration != C.TIME_UNSET) {
+                PlaybackProgressStore.save(
+                    context,
+                    videoUri.toString(),
+                    player.currentPosition,
+                    currentDuration
+                )
+            }
             delay(5_000L)
         }
     }
