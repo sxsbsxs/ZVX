@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ClosedCaption
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Forward10
 import androidx.compose.material.icons.filled.Replay10
 import androidx.compose.material.icons.filled.Tune
@@ -72,6 +73,7 @@ import kotlinx.coroutines.delay
 fun PlayerScreen(
     videoUri: Uri,
     modifier: Modifier = Modifier,
+    isAudio: Boolean = false,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
@@ -200,6 +202,35 @@ fun PlayerScreen(
                 if (view.player !== player) view.player = player
             }
         )
+
+        if (isAudio) {
+            Column(
+                modifier = Modifier.align(Alignment.Center).padding(32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.MusicNote,
+                    contentDescription = null,
+                    tint = Color(0xFFC7F36B),
+                    modifier = Modifier.size(72.dp)
+                )
+                Text(
+                    text = title,
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = "NOW PLAYING",
+                    color = Color.White.copy(alpha = 0.58f),
+                    fontSize = 10.sp,
+                    letterSpacing = 2.sp
+                )
+            }
+        }
 
         if (controlsVisible) {
             Column(

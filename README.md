@@ -4,7 +4,10 @@ A clean, modern Android video player built with Kotlin, Jetpack Compose and Andr
 
 ## Included in this foundation
 
-- Open local videos through Android's system document picker (Storage Access Framework).
+- Browse local video and audio collections through MediaStore, with search and Video / Audio / Recent filters.
+- Request media permissions only when the user chooses to build the library; Android 14+ selected-video access is supported.
+- Remember the last 50 played local items on-device.
+- Open individual local files through Android's system document picker (Storage Access Framework).
 - Play direct HTTP and HTTPS video URLs.
 - HLS and MPEG-DASH streaming through Media3 modules.
 - Progressive playback for common media containers when a device has a compatible decoder.

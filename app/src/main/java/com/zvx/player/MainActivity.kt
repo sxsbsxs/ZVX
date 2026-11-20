@@ -24,8 +24,9 @@ class MainActivity : ComponentActivity() {
         setContent {
             ZvxTheme {
                 var activeSource by rememberSaveable { mutableStateOf<String?>(null) }
+                var activeIsAudio by rememberSaveable { mutableStateOf(false) }
 
-                val videoPicker = rememberLauncherForActivityResult(
+                val filePicker = rememberLauncherForActivityResult(
                     contract = ActivityResultContracts.OpenDocument()
                 ) { selectedUri ->
                     if (selectedUri != null) {
@@ -35,25 +36,39 @@ class MainActivity : ComponentActivity() {
                                 Intent.FLAG_GRANT_READ_URI_PERMISSION
                             )
                         } catch (_: SecurityException) {
-                            // Some document providers grant a temporary URI only.
+                            // Some document providers grant temporary access only.
                         }
                         activeSource = selectedUri.toString()
+                        activeIsAudio = selectedUri.toString().substringBefore('?')
+                            .substringAfterLast('.', "")
+                            .lowercase() in setOf("mp3", "m4a", "aac", "flac", "wav", "ogg", "opus")
                     }
                 }
 
                 if (activeSource == null) {
                     HomeScreen(
                         modifier = Modifier.fillMaxSize(),
-                        onChooseVideo = {
-                            videoPicker.launch(arrayOf("video/*", "application/octet-stream"))
+                        onChooseFile = {
+                            filePicker.launch(arrayOf("video/*", "audio/*", "application/octet-stream"))
                         },
-                        onOpenStream = { address -> activeSource = address }
+                        onPlayMedia = { uri, isAudio ->
+                            activeSource = uri
+                            activeIsAudio = isAudio
+                        },
+                        onOpenStream = { address ->
+                            activeSource = address
+                            activeIsAudio = false
+                        }
                     )
                 } else {
                     PlayerScreen(
                         videoUri = Uri.parse(activeSource),
+                        isAudio = activeIsAudio,
                         modifier = Modifier.fillMaxSize(),
-                        onBack = { activeSource = null }
+                        onBack = {
+                            activeSource = null
+                            activeIsAudio = false
+                        }
                     )
                 }
             }
