@@ -34,9 +34,11 @@ class NativeSubtitleTimelineTest(unittest.TestCase):
     def shift(self, source, offset_ms):
         result = subprocess.run(
             [str(self.binary), str(offset_ms)],
-            input=source, check=True, capture_output=True, text=True,
+            input=source.encode("utf-8"),
+            check=True,
+            capture_output=True,
         )
-        return result.stdout
+        return result.stdout.decode("utf-8")
 
     def test_subrip_positive_delay_preserves_crlf(self):
         source = "1\r\n00:00:01,100 --> 00:00:02,600\r\nCaption\r\n"

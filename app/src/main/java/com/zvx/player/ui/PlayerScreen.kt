@@ -410,6 +410,7 @@ private fun PlayerScreenContent(
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                 currentMediaIndex = player.currentMediaItemIndex
                 queueSize = player.mediaItemCount
+                duration = 0L
                 onQueueChanged(editableQueue, mediaItem?.localConfiguration?.uri)
                 currentTitle = mediaItem?.mediaMetadata?.title?.toString()
                     ?: mediaItem?.localConfiguration?.uri?.lastPathSegment?.substringAfterLast('/')
@@ -448,7 +449,9 @@ private fun PlayerScreenContent(
         while (true) {
             currentPosition = player.currentPosition.coerceAtLeast(0L)
             val playerDuration = player.duration
-            duration = if (playerDuration == C.TIME_UNSET) 0L else playerDuration.coerceAtLeast(0L)
+            if (playerDuration != C.TIME_UNSET && playerDuration > 0L) {
+                duration = playerDuration
+            }
             isPlaying = player.isPlaying
             val currentDuration = player.duration
             val activeUri = player.currentMediaItem?.localConfiguration?.uri?.toString()
@@ -471,6 +474,9 @@ private fun PlayerScreenContent(
                 MediaMetadataProbe.inspect(context, artworkUri)
             }
             audioArtwork = snapshot?.artwork?.asImageBitmap()
+            if (duration <= 0L && (snapshot?.durationMs ?: 0L) > 0L) {
+                duration = snapshot?.durationMs ?: 0L
+            }
             if (currentArtist.isBlank() && !snapshot?.artist.isNullOrBlank()) {
                 currentArtist = snapshot?.artist.orEmpty()
             }
