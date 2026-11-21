@@ -2,7 +2,9 @@ package com.zvx.player.ui
 
 object ZvxStrings {
     private val zh = mapOf(
-        "Your library" to "媒体库", "Resume last queue" to "继续上次播放队列",
+        "Your library" to "媒体库", "YOUR MEDIA" to "你的媒体", "videos" to "个视频", "audio tracks" to "首音频",
+        "Newest first" to "最新优先", "Name" to "名称", "Longest" to "时长最长", "Largest" to "文件最大",
+        "Resume last queue" to "继续上次播放队列",
         "Saved playlist" to "已保存的播放列表", "PLAY" to "播放",
         "Search title, artist or album" to "搜索标题、艺术家或专辑",
         "All" to "全部", "Videos" to "视频", "Audio" to "音频", "Recent" to "最近播放",
@@ -65,7 +67,8 @@ object ZvxStrings {
         "Repeat: all" to "循环：列表", "Repeat: one" to "循环：单曲", "Repeat: off" to "循环：关闭"
     )
     private val ja = mapOf(
-        "Your library" to "メディアライブラリ", "Resume last queue" to "前回のキューを再開",
+        "Your library" to "メディアライブラリ", "YOUR MEDIA" to "メディア一覧", "videos" to "本の動画", "audio tracks" to "曲の音声",
+        "Resume last queue" to "前回のキューを再開",
         "Saved playlist" to "保存したプレイリスト", "PLAY" to "再生",
         "Search title, artist or album" to "タイトル、アーティスト、アルバムを検索",
         "All" to "すべて", "Videos" to "動画", "Audio" to "音声", "Recent" to "最近再生",

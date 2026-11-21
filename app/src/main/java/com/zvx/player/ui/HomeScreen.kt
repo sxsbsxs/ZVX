@@ -306,7 +306,7 @@ fun HomeScreen(
                 Spacer(Modifier.size(11.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text("ZVX", color = ZvxText, fontSize = 20.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
-                    Text("YOUR MEDIA", color = ZvxMuted, fontSize = 9.sp, letterSpacing = 1.7.sp)
+                    Text(tr("YOUR MEDIA", languageCode), color = ZvxMuted, fontSize = 9.sp, letterSpacing = 1.7.sp)
                 }
                 IconButton(onClick = {
                     access = MediaPermission.current(context)
@@ -343,8 +343,8 @@ fun HomeScreen(
                     if (!access.hasAny) {
                         tr("Give ZVX access to build your local collection.", languageCode)
                     } else {
-                        media.count { it.kind == MediaKind.VIDEO }.toString() + " videos  ·  " +
-                            media.count { it.kind == MediaKind.AUDIO }.toString() + " audio tracks"
+                        media.count { it.kind == MediaKind.VIDEO }.toString() + " " + tr("videos", languageCode) + "  ·  " +
+                            media.count { it.kind == MediaKind.AUDIO }.toString() + " " + tr("audio tracks", languageCode)
                     },
                     color = ZvxMuted,
                     fontSize = 13.sp
@@ -601,7 +601,7 @@ fun HomeScreen(
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text(
-                                sort.label,
+                                tr(sort.label, languageCode),
                                 color = if (selectedSort == sort) ZvxAccent else ZvxText,
                                 modifier = Modifier.weight(1f)
                             )

@@ -240,7 +240,7 @@ private fun PlayerScreenContent(
                     .setMediaMetadata(
                         MediaMetadata.Builder()
                             .setTitle(entry.title)
-                            .setArtist(entry.artist ?: "ZVX")
+                            .setArtist(entry.artist.orEmpty())
                             .setAlbumTitle(entry.album)
                             .build()
                     )
