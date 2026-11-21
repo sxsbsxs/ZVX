@@ -60,7 +60,7 @@ class MultiLanguageLayoutTest(unittest.TestCase):
         home = (verify_multilang.ROOT / "app/src/main/java/com/zvx/player/ui/HomeScreen.kt").read_text()
         self.assertIn("MediaFavoritesStore.toggle", home)
         self.assertIn("FAVORITES", home)
-        self.assertIn("parseM3uPlaylist(content)", home)
+        self.assertIn("parseM3uPlaylist(content, selectedUri)", home)
         self.assertIn("Import M3U playlist", home)
         self.assertIn("URI(playlistUri.toString()).resolve(path)", home)
         self.assertIn("DocumentsContract.buildDocumentUri", home)
