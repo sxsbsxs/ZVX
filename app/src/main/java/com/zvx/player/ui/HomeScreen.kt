@@ -324,9 +324,6 @@ fun HomeScreen(
                 IconButton(onClick = { showStreamDialog = true }) {
                     Icon(Icons.Default.Link, contentDescription = "Play from URL", tint = ZvxAccent)
                 }
-                IconButton(onClick = { showHistoryScreen = true }) {
-                    Icon(Icons.Default.History, contentDescription = "Playback history", tint = ZvxText)
-                }
                 IconButton(onClick = { showSettingsDialog = true }) {
                     Icon(Icons.Default.Settings, contentDescription = "Settings", tint = ZvxText)
                 }
