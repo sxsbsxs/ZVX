@@ -18,6 +18,8 @@ class MultiLanguageLayoutTest(unittest.TestCase):
         gradle = (verify_multilang.ROOT / "app/build.gradle.kts").read_text()
         java = (verify_multilang.ROOT / "app/src/main/java/com/zvx/player/platform/NativeMediaBridge.java").read_text()
         kotlin = (verify_multilang.ROOT / "app/src/main/java/com/zvx/player/ui/PlayerScreen.kt").read_text()
+        service = (verify_multilang.ROOT / "app/src/main/java/com/zvx/player/PlaybackService.kt").read_text()
+        manifest = (verify_multilang.ROOT / "app/src/main/AndroidManifest.xml").read_text()
         self.assertIn("add_library(zvx_native SHARED", cmake)
         self.assertIn("externalNativeBuild", gradle)
         self.assertIn("nativeClampSeekPosition", java)
@@ -27,6 +29,8 @@ class MultiLanguageLayoutTest(unittest.TestCase):
         self.assertIn("detectDragGestures", kotlin)
         self.assertIn("setStreamVolume", kotlin)
         self.assertIn("attributes.screenBrightness = originalScreenBrightness", kotlin)
+        self.assertIn("MediaSession.Builder", service)
+        self.assertIn("foregroundServiceType=\"mediaPlayback\"", manifest)
 
 
 if __name__ == "__main__":

@@ -14,6 +14,7 @@ A clean, modern Android media player with a modular multi-language foundation.
 - Progressive playback for common media containers when a device has a compatible decoder.
 - Play, pause, seek, skip ±10 seconds with buttons or double-tap left/right on the video, and change playback speed (0.75×–2×).
 - On-screen vertical gestures: drag up/down on the left side to adjust video brightness and on the right side to adjust media volume; app brightness is restored when leaving the player.
+- Background audio playback through Android MediaSessionService with media notification controls.
 - Switch between supported embedded audio tracks and subtitle tracks.
 - Disable embedded subtitles or load an external SRT, VTT, TTML, SSA or ASS subtitle file.
 - Original dark ZVX interface and GitHub Actions debug APK build.

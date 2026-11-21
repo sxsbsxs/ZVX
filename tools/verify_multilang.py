@@ -13,6 +13,8 @@ def required_files():
         "app/src/main/cpp/CMakeLists.txt",
         "app/src/main/cpp/zvx_native.cpp",
         "app/src/main/java/com/zvx/player/ui/PlayerScreen.kt",
+        "app/src/main/java/com/zvx/player/PlaybackService.kt",
+        "app/src/main/java/com/zvx/player/PlaybackPlayerHolder.kt",
         "app/build.gradle.kts",
     ]
 
@@ -29,6 +31,8 @@ def main():
     java = (ROOT / "app/src/main/java/com/zvx/player/platform/NativeMediaBridge.java").read_text()
     cpp = (ROOT / "app/src/main/cpp/zvx_native.cpp").read_text()
     kotlin = (ROOT / "app/src/main/java/com/zvx/player/ui/PlayerScreen.kt").read_text()
+    manifest = (ROOT / "app/src/main/AndroidManifest.xml").read_text()
+    service = (ROOT / "app/src/main/java/com/zvx/player/PlaybackService.kt").read_text()
     checks = {
         "CMake builds the native library": "add_library(zvx_native SHARED" in cmake,
         "Gradle configures CMake and the NDK": 'path = file("src/main/cpp/CMakeLists.txt")' in gradle and "abiFilters" in gradle,
@@ -38,6 +42,7 @@ def main():
         "Player supports double-tap seeking": "onDoubleTap" in kotlin and "−10 seconds" in kotlin and "+10 seconds" in kotlin,
         "Player supports vertical brightness and volume gestures": "detectDragGestures" in kotlin and "screenBrightness" in kotlin and "setStreamVolume" in kotlin,
         "Player restores app brightness after exit": "originalScreenBrightness" in kotlin and "attributes.screenBrightness = originalScreenBrightness" in kotlin,
+        "Media session service is registered": "MediaSessionService" in manifest and "foregroundServiceType=\"mediaPlayback\"" in manifest and "MediaSession.Builder" in service,
     }
     for label, passed in checks.items():
         print(f"[{'OK' if passed else 'FAIL'}] {label}")

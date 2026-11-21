@@ -6,6 +6,8 @@ import android.content.ContextWrapper
 import android.content.Intent
 import android.media.AudioManager
 import android.net.Uri
+import android.content.Intent
+import androidx.core.content.ContextCompat
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -63,6 +65,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.PlaybackParameters
@@ -73,6 +76,8 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import com.zvx.player.data.PlaybackProgressStore
+import com.zvx.player.PlaybackPlayerHolder
+import com.zvx.player.PlaybackService
 import com.zvx.player.platform.NativeMediaBridge
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
@@ -91,14 +96,7 @@ fun PlayerScreen(
     val savedPosition = remember(videoUri) {
         PlaybackProgressStore.getPosition(context, videoUri.toString())
     }
-    val player = remember(videoUri) {
-        ExoPlayer.Builder(context).build().apply {
-            val startPosition = savedPosition.takeIf { it >= 5_000L } ?: C.TIME_UNSET
-            setMediaItem(MediaItem.fromUri(videoUri), startPosition)
-            playWhenReady = true
-            prepare()
-        }
-    }
+    val player = remember(context) { PlaybackPlayerHolder.get(context) }
 
     var controlsVisible by remember(videoUri) { mutableStateOf(true) }
     var isPlaying by remember(videoUri) { mutableStateOf(true) }
@@ -112,6 +110,31 @@ fun PlayerScreen(
     var availableTracks by remember(player) { mutableStateOf(player.currentTracks) }
     val speeds = listOf(0.75f, 1f, 1.25f, 1.5f, 2f)
     val title = videoUri.lastPathSegment?.substringAfterLast('/')?.take(64) ?: "Now playing"
+    val leavePlayer = {
+        if (!isAudio) player.pause()
+        onBack()
+    }
+
+    LaunchedEffect(player, videoUri) {
+        val currentUri = player.currentMediaItem?.localConfiguration?.uri
+        if (currentUri != videoUri) {
+            val startPosition = savedPosition.takeIf { it >= 5_000L } ?: C.TIME_UNSET
+            val mediaItem = MediaItem.Builder()
+                .setUri(videoUri)
+                .setMediaMetadata(
+                    MediaMetadata.Builder()
+                        .setTitle(title)
+                        .setArtist("ZVX")
+                        .build()
+                )
+                .build()
+            player.setMediaItem(mediaItem, startPosition)
+            player.prepare()
+        }
+        ContextCompat.startForegroundService(context, Intent(context, PlaybackService::class.java))
+        player.playWhenReady = true
+        player.play()
+    }
 
     val subtitlePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -159,7 +182,7 @@ fun PlayerScreen(
         }
     }
 
-    BackHandler { onBack() }
+    BackHandler { leavePlayer() }
 
     DisposableEffect(activity) {
         onDispose {
@@ -198,7 +221,6 @@ fun PlayerScreen(
                     finalDuration
                 )
             }
-            player.release()
         }
     }
 
@@ -378,7 +400,7 @@ fun PlayerScreen(
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = leavePlayer) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
                     }
                     Column(modifier = Modifier.weight(1f)) {
