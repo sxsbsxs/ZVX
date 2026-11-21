@@ -178,6 +178,7 @@ private fun PlayerScreenContent(
     var shuffleEnabled by remember(player) { mutableStateOf(player.shuffleModeEnabled) }
     var repeatMode by remember(player) { mutableIntStateOf(player.repeatMode) }
     var currentMediaIndex by remember(player) { mutableIntStateOf(player.currentMediaItemIndex) }
+    var queueSize by remember(player) { mutableIntStateOf(player.mediaItemCount) }
     var currentTitle by remember(videoUri) { mutableStateOf(videoUri.lastPathSegment?.substringAfterLast('/')?.take(64) ?: "Now playing") }
     var seekFeedback by remember(videoUri) { mutableStateOf<String?>(null) }
     var availableTracks by remember(player) { mutableStateOf(player.currentTracks) }
@@ -296,11 +297,22 @@ private fun PlayerScreenContent(
                 availableTracks = tracks
             }
 
+            override fun onTimelineChanged(timeline: androidx.media3.common.Timeline, reason: Int) {
+                queueSize = player.mediaItemCount
+                currentMediaIndex = player.currentMediaItemIndex
+            }
+
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                 currentMediaIndex = player.currentMediaItemIndex
+                queueSize = player.mediaItemCount
                 currentTitle = mediaItem?.mediaMetadata?.title?.toString()
                     ?: mediaItem?.localConfiguration?.uri?.lastPathSegment?.substringAfterLast('/')
                     ?: "Now playing"
+                val itemUri = mediaItem?.localConfiguration?.uri?.toString()
+                val resumePosition = itemUri?.let { PlaybackProgressStore.getPosition(context, it) } ?: 0L
+                if (resumePosition >= 5_000L && player.currentPosition < 5_000L) {
+                    player.seekTo(resumePosition)
+                }
             }
 
             override fun onPlayerError(error: PlaybackException) {
@@ -312,10 +324,11 @@ private fun PlayerScreenContent(
         onDispose {
             player.removeListener(listener)
             val finalDuration = player.duration
-            if (finalDuration > 0L && finalDuration != C.TIME_UNSET) {
+            val activeUri = player.currentMediaItem?.localConfiguration?.uri?.toString()
+            if (activeUri != null && finalDuration > 0L && finalDuration != C.TIME_UNSET) {
                 PlaybackProgressStore.save(
                     context,
-                    videoUri.toString(),
+                    activeUri,
                     player.currentPosition,
                     finalDuration
                 )
@@ -330,10 +343,11 @@ private fun PlayerScreenContent(
             duration = if (playerDuration == C.TIME_UNSET) 0L else playerDuration.coerceAtLeast(0L)
             isPlaying = player.isPlaying
             val currentDuration = player.duration
-            if (currentDuration > 0L && currentDuration != C.TIME_UNSET) {
+            val activeUri = player.currentMediaItem?.localConfiguration?.uri?.toString()
+            if (activeUri != null && currentDuration > 0L && currentDuration != C.TIME_UNSET) {
                 PlaybackProgressStore.save(
                     context,
-                    videoUri.toString(),
+                    activeUri,
                     player.currentPosition,
                     currentDuration
                 )
@@ -559,34 +573,9 @@ private fun PlayerScreenContent(
                             }
                         }
                     }
-                    if (player.mediaItemCount > 1) {
+                    if (queueSize > 1) {
                         TextButton(onClick = { queueDialogVisible = true }) {
                             Text("Queue", color = Color.White, fontWeight = FontWeight.Bold)
-                        }
-                        TextButton(
-                            onClick = {
-                                shuffleEnabled = !shuffleEnabled
-                                player.shuffleModeEnabled = shuffleEnabled
-                            }
-                        ) {
-                            Text(if (shuffleEnabled) "Shuffle on" else "Shuffle", color = if (shuffleEnabled) Color(0xFFC7F36B) else Color.White)
-                        }
-                        TextButton(
-                            onClick = {
-                                repeatMode = when (repeatMode) {
-                                    Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL
-                                    Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE
-                                    else -> Player.REPEAT_MODE_OFF
-                                }
-                                player.repeatMode = repeatMode
-                            }
-                        ) {
-                            val repeatLabel = when (repeatMode) {
-                                Player.REPEAT_MODE_ALL -> "Repeat all"
-                                Player.REPEAT_MODE_ONE -> "Repeat one"
-                                else -> "Repeat off"
-                            }
-                            Text(repeatLabel, color = if (repeatMode == Player.REPEAT_MODE_OFF) Color.White else Color(0xFFC7F36B))
                         }
                     }
                     IconButton(onClick = { trackDialogVisible = true }) {
@@ -614,7 +603,7 @@ private fun PlayerScreenContent(
                     if (player.mediaItemCount > 1) {
                         IconButton(
                             onClick = { player.seekToPreviousMediaItem() },
-                            enabled = player.currentMediaItemIndex > 0 || player.repeatMode == Player.REPEAT_MODE_ALL,
+                            enabled = player.hasPreviousMediaItem(),
                             modifier = Modifier.size(42.dp)
                         ) {
                             Icon(Icons.Default.SkipPrevious, contentDescription = "Previous item", tint = Color.White)
@@ -684,7 +673,7 @@ private fun PlayerScreenContent(
                     if (player.mediaItemCount > 1) {
                         IconButton(
                             onClick = { player.seekToNextMediaItem() },
-                            enabled = player.currentMediaItemIndex < player.mediaItemCount - 1 || player.repeatMode == Player.REPEAT_MODE_ALL,
+                            enabled = player.hasNextMediaItem(),
                             modifier = Modifier.size(42.dp)
                         ) {
                             Icon(Icons.Default.SkipNext, contentDescription = "Next item", tint = Color.White)
@@ -760,8 +749,7 @@ private fun PlayerScreenContent(
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    queue.forEach { entry ->
-                        val index = queue.indexOf(entry)
+                    queue.forEachIndexed { index, entry ->
                         TextButton(
                             onClick = {
                                 player.seekTo(index, 0L)
@@ -786,6 +774,37 @@ private fun PlayerScreenContent(
                             if (index == currentMediaIndex) {
                                 Text("NOW", color = Color(0xFFC7F36B), fontSize = 10.sp, fontWeight = FontWeight.Bold)
                             }
+                        }
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        TextButton(
+                            onClick = {
+                                shuffleEnabled = !shuffleEnabled
+                                player.shuffleModeEnabled = shuffleEnabled
+                            }
+                        ) {
+                            Text(if (shuffleEnabled) "Shuffle: on" else "Shuffle: off")
+                        }
+                        TextButton(
+                            onClick = {
+                                repeatMode = when (repeatMode) {
+                                    Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL
+                                    Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE
+                                    else -> Player.REPEAT_MODE_OFF
+                                }
+                                player.repeatMode = repeatMode
+                            }
+                        ) {
+                            Text(
+                                when (repeatMode) {
+                                    Player.REPEAT_MODE_ALL -> "Repeat: all"
+                                    Player.REPEAT_MODE_ONE -> "Repeat: one"
+                                    else -> "Repeat: off"
+                                }
+                            )
                         }
                     }
                 }
