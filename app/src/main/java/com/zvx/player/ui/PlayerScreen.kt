@@ -112,6 +112,7 @@ import com.zvx.player.platform.NativeAudioProcessor
 import com.zvx.player.platform.NativeMediaBridge
 import com.zvx.player.ui.theme.ZvxAccent
 import com.zvx.player.ui.theme.ZvxMuted
+import com.zvx.player.ui.theme.ZvxText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
