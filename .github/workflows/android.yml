@@ -30,8 +30,8 @@ jobs:
           gradle-version: "8.13"
       - name: Run Python repository checks
         run: python3 -m unittest discover -s tools/tests -v
-      - name: Build debug APK
-        run: gradle assembleDebug --stacktrace
+      - name: Run Kotlin unit tests and build debug APK
+        run: gradle testDebugUnitTest assembleDebug --stacktrace
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:

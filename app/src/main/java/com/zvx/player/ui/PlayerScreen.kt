@@ -100,10 +100,14 @@ import androidx.media3.ui.PlayerView
 import com.zvx.player.data.PlaybackProgressStore
 import com.zvx.player.data.PlaybackSettingsStore
 import com.zvx.player.data.PlaybackPreferences
+import com.zvx.player.data.SubtitleTimeline
 import com.zvx.player.data.MediaEntry
 import com.zvx.player.platform.NativeMediaBridge
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.IOException
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -197,6 +201,11 @@ private fun PlayerScreenContent(
     var sleepTimerMinutes by remember(videoUri) { mutableIntStateOf(0) }
     var subtitleSizeSp by remember(videoUri) { mutableIntStateOf(storedPreferences.subtitleSizeSp) }
     var subtitleBackgroundEnabled by remember(videoUri) { mutableStateOf(storedPreferences.subtitleBackgroundEnabled) }
+    var subtitleDelayMs by remember(videoUri) { mutableIntStateOf(storedPreferences.subtitleDelayMs) }
+    var externalSubtitleUri by remember(videoUri) { mutableStateOf<Uri?>(null) }
+    var externalSubtitleMimeType by remember(videoUri) { mutableStateOf<String?>(null) }
+    var externalSubtitleLabel by remember(videoUri) { mutableStateOf<String?>(null) }
+    var externalSubtitleTargetUri by remember(videoUri) { mutableStateOf<Uri?>(null) }
     var shuffleEnabled by remember(player) { mutableStateOf(player.shuffleModeEnabled) }
     var repeatMode by remember(player) { mutableIntStateOf(player.repeatMode) }
     var currentMediaIndex by remember(player) { mutableIntStateOf(player.currentMediaItemIndex) }
@@ -273,29 +282,84 @@ private fun PlayerScreenContent(
                 playbackError = "Unsupported subtitle. Choose SRT, VTT, TTML, SSA or ASS."
             } else {
                 val currentItem = player.currentMediaItem
-                if (currentItem == null) {
-                    playbackError = "There is no active video to attach a subtitle to."
+                val targetUri = currentItem?.localConfiguration?.uri
+                if (currentItem == null || targetUri == null) {
+                    playbackError = "There is no active media item to attach a subtitle to."
                 } else {
-                    val subtitle = MediaItem.SubtitleConfiguration.Builder(selectedUri)
-                        .setMimeType(mimeType)
-                        .setLanguage("und")
-                        .setLabel(selectedUri.lastPathSegment?.substringAfterLast('/') ?: "External subtitle")
-                        .setSelectionFlags(C.SELECTION_FLAG_DEFAULT)
-                        .build()
-                    val existing = currentItem.localConfiguration?.subtitleConfigurations.orEmpty()
-                    val updatedItem = currentItem.buildUpon()
-                        .setSubtitleConfigurations(existing + subtitle)
-                        .build()
-
-                    player.replaceMediaItem(player.currentMediaItemIndex, updatedItem)
-                    player.trackSelectionParameters = player.trackSelectionParameters
-                        .buildUpon()
-                        .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
-                        .build()
+                    externalSubtitleUri = selectedUri
+                    externalSubtitleMimeType = mimeType
+                    externalSubtitleLabel = selectedUri.lastPathSegment?.substringAfterLast('/') ?: "External subtitle"
+                    externalSubtitleTargetUri = targetUri
                     playbackError = null
                 }
             }
         }
+    }
+
+    LaunchedEffect(
+        externalSubtitleUri,
+        externalSubtitleMimeType,
+        externalSubtitleLabel,
+        externalSubtitleTargetUri,
+        subtitleDelayMs,
+        currentMediaIndex
+    ) {
+        val sourceUri = externalSubtitleUri ?: return@LaunchedEffect
+        val mimeType = externalSubtitleMimeType ?: return@LaunchedEffect
+        val subtitleLabel = externalSubtitleLabel ?: "External subtitle"
+        val targetUri = externalSubtitleTargetUri ?: return@LaunchedEffect
+        val activeItem = player.currentMediaItem ?: return@LaunchedEffect
+        if (activeItem.localConfiguration?.uri != targetUri) return@LaunchedEffect
+
+        val preparedUri = try {
+            if (subtitleDelayMs == 0 ||
+                (mimeType != MimeTypes.APPLICATION_SUBRIP && mimeType != MimeTypes.TEXT_VTT)
+            ) {
+                sourceUri
+            } else {
+                withContext(Dispatchers.IO) {
+                    val content = context.contentResolver.openInputStream(sourceUri)
+                        ?.bufferedReader(Charsets.UTF_8)
+                        ?.use { it.readText() }
+                        ?: throw IOException("Unable to read the selected subtitle.")
+                    if (content.length > 5 * 1024 * 1024) {
+                        throw IOException("Subtitle file is larger than 5 MB.")
+                    }
+                    val shiftedContent = SubtitleTimeline.shift(content, subtitleDelayMs)
+                    val outputDirectory = File(context.cacheDir, "zvx-subtitles").apply { mkdirs() }
+                    val extension = if (mimeType == MimeTypes.TEXT_VTT) "vtt" else "srt"
+                    val outputFile = File(
+                        outputDirectory,
+                        "subtitle_${sourceUri.toString().hashCode()}_${subtitleDelayMs}.$extension"
+                    )
+                    outputFile.writeText(shiftedContent, Charsets.UTF_8)
+                    Uri.fromFile(outputFile)
+                }
+            }
+        } catch (error: Exception) {
+            playbackError = "Unable to apply subtitle timing: ${error.message ?: "unknown error"}"
+            return@LaunchedEffect
+        }
+
+        val currentItem = player.currentMediaItem ?: return@LaunchedEffect
+        if (currentItem.localConfiguration?.uri != targetUri) return@LaunchedEffect
+        val subtitle = MediaItem.SubtitleConfiguration.Builder(preparedUri)
+            .setMimeType(mimeType)
+            .setLanguage("und")
+            .setLabel(subtitleLabel)
+            .setSelectionFlags(C.SELECTION_FLAG_DEFAULT)
+            .build()
+        val existing = currentItem.localConfiguration?.subtitleConfigurations.orEmpty()
+            .filterNot { it.label == subtitleLabel }
+        val updatedItem = currentItem.buildUpon()
+            .setSubtitleConfigurations(existing + subtitle)
+            .build()
+        player.replaceMediaItem(player.currentMediaItemIndex, updatedItem)
+        player.trackSelectionParameters = player.trackSelectionParameters
+            .buildUpon()
+            .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+            .build()
+        playbackError = null
     }
 
     BackHandler { leavePlayer() }
@@ -413,14 +477,15 @@ private fun PlayerScreenContent(
         }
     }
 
-    LaunchedEffect(speedIndex, aspectModeIndex, subtitleSizeSp, subtitleBackgroundEnabled) {
+    LaunchedEffect(speedIndex, aspectModeIndex, subtitleSizeSp, subtitleBackgroundEnabled, subtitleDelayMs) {
         PlaybackSettingsStore.save(
             context,
             PlaybackPreferences(
                 speedIndex = speedIndex,
                 aspectMode = aspectModeIndex,
                 subtitleSizeSp = subtitleSizeSp,
-                subtitleBackgroundEnabled = subtitleBackgroundEnabled
+                subtitleBackgroundEnabled = subtitleBackgroundEnabled,
+                subtitleDelayMs = subtitleDelayMs
             )
         )
     }
@@ -978,6 +1043,45 @@ private fun PlayerScreenContent(
                             Text("A+")
                         }
                     }
+                    Text("SUBTITLE TIMING", color = Color(0xFF7F8A78), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        "External SRT / WebVTT delay · ${subtitleDelayMs} ms",
+                        color = Color.White.copy(alpha = 0.76f),
+                        fontSize = 12.sp
+                    )
+                    Slider(
+                        value = subtitleDelayMs.toFloat(),
+                        onValueChange = { value ->
+                            subtitleDelayMs = ((value / 250f).roundToInt() * 250).coerceIn(-10_000, 10_000)
+                        },
+                        valueRange = -10_000f..10_000f,
+                        steps = 79,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = SliderDefaults.colors(
+                            thumbColor = Color(0xFFC7F36B),
+                            activeTrackColor = Color(0xFFC7F36B),
+                            inactiveTrackColor = Color.White.copy(alpha = 0.28f)
+                        )
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        TextButton(onClick = { subtitleDelayMs = (subtitleDelayMs - 250).coerceAtLeast(-10_000) }) {
+                            Text("−250 ms")
+                        }
+                        TextButton(onClick = { subtitleDelayMs = 0 }) {
+                            Text("Reset")
+                        }
+                        TextButton(onClick = { subtitleDelayMs = (subtitleDelayMs + 250).coerceAtMost(10_000) }) {
+                            Text("+250 ms")
+                        }
+                    }
+                    Text(
+                        "Positive values delay subtitles; negative values show them earlier. Embedded subtitles follow the source timing.",
+                        color = Color.White.copy(alpha = 0.55f),
+                        fontSize = 10.sp
+                    )
                     TextButton(
                         onClick = { subtitleBackgroundEnabled = !subtitleBackgroundEnabled },
                         modifier = Modifier.fillMaxWidth()
@@ -1139,6 +1243,7 @@ private fun PlayerScreenContent(
                 trackDialogVisible = false
             },
             onSelectSubtitle = { group, trackIndex ->
+                externalSubtitleUri = null
                 player.trackSelectionParameters = player.trackSelectionParameters
                     .buildUpon()
                     .clearOverridesOfType(C.TRACK_TYPE_TEXT)
@@ -1148,6 +1253,7 @@ private fun PlayerScreenContent(
                 trackDialogVisible = false
             },
             onSubtitleOff = {
+                externalSubtitleUri = null
                 player.trackSelectionParameters = player.trackSelectionParameters
                     .buildUpon()
                     .clearOverridesOfType(C.TRACK_TYPE_TEXT)

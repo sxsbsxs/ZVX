@@ -129,6 +129,7 @@ fun HomeScreen(
     var showSortDialog by remember { mutableStateOf(false) }
     var showSettingsDialog by remember { mutableStateOf(false) }
     var showHistoryScreen by remember { mutableStateOf(false) }
+    var showFavoritesScreen by remember { mutableStateOf(false) }
     var showClearHistoryDialog by remember { mutableStateOf(false) }
     var showClearFavoritesDialog by remember { mutableStateOf(false) }
     var showStreamDialog by remember { mutableStateOf(false) }
@@ -208,35 +209,17 @@ fun HomeScreen(
         }
     }
 
-    BackHandler(enabled = showHistoryScreen) {
+    BackHandler(enabled = showHistoryScreen || showFavoritesScreen) {
         showHistoryScreen = false
+        showFavoritesScreen = false
     }
 
     val mediaByUri = media.associateBy { it.uri.toString() }
     val recentEntries = recentUris.mapIndexedNotNull { index, uriString ->
-        mediaByUri[uriString] ?: runCatching {
-            val uri = Uri.parse(uriString)
-            val displayName = uri.lastPathSegment?.substringAfterLast('/')?.takeIf { it.isNotBlank() }
-                ?: "Recently played item"
-            val extension = displayName.substringAfterLast('.', "").lowercase()
-            val kind = if (extension in setOf("mp3", "m4a", "aac", "flac", "wav", "ogg", "opus", "wma")) {
-                MediaKind.AUDIO
-            } else {
-                MediaKind.VIDEO
-            }
-            MediaEntry(
-                id = -(index.toLong() + 1L),
-                uri = uri,
-                title = displayName.substringBeforeLast('.', displayName),
-                displayName = displayName,
-                mimeType = if (kind == MediaKind.AUDIO) "audio/*" else "video/*",
-                durationMs = 0L,
-                sizeBytes = 0L,
-                dateAddedSeconds = 0L,
-                folderName = uri.host ?: "History",
-                kind = kind
-            )
-        }.getOrNull()
+        mediaByUri[uriString] ?: savedUriEntry(uriString, index, "History")
+    }
+    val favoriteEntries = favoriteUris.mapIndexedNotNull { index, uriString ->
+        mediaByUri[uriString] ?: savedUriEntry(uriString, index, "Favorites")
     }
     val folders = media.map { it.folderName }.filter { it.isNotBlank() }
         .distinct().sortedBy { it.lowercase() }
@@ -288,6 +271,21 @@ fun HomeScreen(
                     PlaybackHistoryStore.markPlayed(context, entry.uri.toString())
                     recentUris = PlaybackHistoryStore.getRecent(context)
                     val queue = recentEntries.filter { it.kind == entry.kind }
+                    onPlayMedia(entry.uri.toString(), entry.kind == MediaKind.AUDIO, queue)
+                }
+            )
+        } else if (showFavoritesScreen) {
+            FavoritesScreen(
+                entries = favoriteEntries,
+                onBack = { showFavoritesScreen = false },
+                onClearAll = { showClearFavoritesDialog = true },
+                onRemove = { uri ->
+                    favoriteUris = MediaFavoritesStore.toggle(context, uri)
+                },
+                onPlay = { entry ->
+                    PlaybackHistoryStore.markPlayed(context, entry.uri.toString())
+                    recentUris = PlaybackHistoryStore.getRecent(context)
+                    val queue = favoriteEntries.filter { it.kind == entry.kind }
                     onPlayMedia(entry.uri.toString(), entry.kind == MediaKind.AUDIO, queue)
                 }
             )
@@ -479,6 +477,9 @@ fun HomeScreen(
                         Text("Clear playback history", color = MaterialTheme.colorScheme.error)
                     }
                     Text("Favorites · ${favoriteUris.size} items", color = ZvxText, fontSize = 13.sp)
+                    TextButton(onClick = { showSettingsDialog = false; showFavoritesScreen = true }, modifier = Modifier.fillMaxWidth()) {
+                        Text("Open favorites", color = ZvxAccent)
+                    }
                     TextButton(onClick = { showSettingsDialog = false; showClearFavoritesDialog = true }, modifier = Modifier.fillMaxWidth()) {
                         Text("Clear favorites", color = MaterialTheme.colorScheme.error)
                     }
@@ -528,7 +529,12 @@ fun HomeScreen(
                     showClearFavoritesDialog = false
                 }) { Text("Clear", color = MaterialTheme.colorScheme.error) }
             },
-            dismissButton = { TextButton(onClick = { showClearFavoritesDialog = false; showSettingsDialog = true }) { Text("Cancel") } },
+            dismissButton = {
+                TextButton(onClick = {
+                    showClearFavoritesDialog = false
+                    showSettingsDialog = !showFavoritesScreen
+                }) { Text("Cancel") }
+            },
             containerColor = ZvxSurface,
             titleContentColor = ZvxText,
             textContentColor = ZvxMuted
@@ -592,6 +598,102 @@ fun HomeScreen(
                 onOpenStream(address)
             }
         )
+    }
+}
+
+private fun savedUriEntry(uriString: String, index: Int, fallbackFolder: String): MediaEntry? {
+    return runCatching {
+        val uri = Uri.parse(uriString)
+        val displayName = uri.lastPathSegment?.substringAfterLast('/')?.takeIf { it.isNotBlank() }
+            ?: "Saved media item"
+        val extension = displayName.substringAfterLast('.', "").lowercase()
+        val kind = if (extension in setOf("mp3", "m4a", "aac", "flac", "wav", "ogg", "opus", "wma")) {
+            MediaKind.AUDIO
+        } else {
+            MediaKind.VIDEO
+        }
+        MediaEntry(
+            id = -(index.toLong() + 1L),
+            uri = uri,
+            title = displayName.substringBeforeLast('.', displayName),
+            displayName = displayName,
+            mimeType = if (kind == MediaKind.AUDIO) "audio/*" else "video/*",
+            durationMs = 0L,
+            sizeBytes = 0L,
+            dateAddedSeconds = 0L,
+            folderName = uri.host ?: fallbackFolder,
+            kind = kind
+        )
+    }.getOrNull()
+}
+
+@Composable
+private fun FavoritesScreen(
+    entries: List<MediaEntry>,
+    onBack: () -> Unit,
+    onClearAll: () -> Unit,
+    onRemove: (String) -> Unit,
+    onPlay: (MediaEntry) -> Unit
+) {
+    Column(modifier = Modifier.fillMaxSize()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = ZvxText)
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Favorites", color = ZvxText, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+                Text("${entries.size} saved items", color = ZvxMuted, fontSize = 11.sp)
+            }
+            TextButton(onClick = onClearAll, enabled = entries.isNotEmpty()) {
+                Text("Clear all", color = if (entries.isEmpty()) ZvxMuted else MaterialTheme.colorScheme.error)
+            }
+        }
+        if (entries.isEmpty()) {
+            Column(
+                modifier = Modifier.fillMaxSize().padding(28.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Icon(Icons.Default.StarBorder, contentDescription = null, tint = ZvxMuted, modifier = Modifier.size(46.dp))
+                Spacer(Modifier.height(12.dp))
+                Text("No favorites yet", color = ZvxText, fontWeight = FontWeight.SemiBold)
+                Text("Tap the star on any library item to save it here.", color = ZvxMuted, fontSize = 12.sp)
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(start = 18.dp, end = 18.dp, top = 4.dp, bottom = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(9.dp)
+            ) {
+                items(entries, key = { it.uri.toString() }) { entry ->
+                    Surface(
+                        onClick = { onPlay(entry) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(17.dp),
+                        color = ZvxSurface
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(11.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            MediaThumbnail(entry = entry, modifier = Modifier.size(58.dp))
+                            Spacer(Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                Text(entry.title, color = ZvxText, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(entry.subtitleLine(), color = ZvxMuted, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(entry.folderName, color = ZvxMuted.copy(alpha = 0.7f), fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                            IconButton(onClick = { onRemove(entry.uri.toString()) }) {
+                                Icon(Icons.Default.Star, contentDescription = "Remove from favorites", tint = ZvxAccent)
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
