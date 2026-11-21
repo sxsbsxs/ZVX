@@ -36,6 +36,8 @@ import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -71,6 +73,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.zvx.player.data.MediaEntry
+import com.zvx.player.data.MediaFavoritesStore
 import com.zvx.player.data.MediaKind
 import com.zvx.player.data.MediaPermission
 import com.zvx.player.data.MediaStoreRepository
@@ -85,7 +88,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 private enum class LibraryFilter(val label: String) {
-    ALL("All"), VIDEO("Videos"), AUDIO("Audio"), RECENT("Recent")
+    ALL("All"), VIDEO("Videos"), AUDIO("Audio"), RECENT("Recent"), FAVORITES("Favorites")
 }
 
 private enum class LibrarySort(val label: String) {
@@ -103,6 +106,7 @@ fun HomeScreen(
     var access by remember { mutableStateOf(MediaPermission.current(context)) }
     var media by remember { mutableStateOf<List<MediaEntry>>(emptyList()) }
     var recentUris by remember { mutableStateOf(PlaybackHistoryStore.getRecent(context)) }
+    var favoriteUris by remember { mutableStateOf(MediaFavoritesStore.getFavorites(context)) }
     var searchText by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf(LibraryFilter.ALL) }
     var selectedFolder by remember { mutableStateOf("All folders") }
@@ -130,6 +134,7 @@ fun HomeScreen(
             }
             isLoading = false
             recentUris = PlaybackHistoryStore.getRecent(context)
+            favoriteUris = MediaFavoritesStore.getFavorites(context)
         }
     }
 
@@ -142,6 +147,7 @@ fun HomeScreen(
             LibraryFilter.VIDEO -> entry.kind == MediaKind.VIDEO
             LibraryFilter.AUDIO -> entry.kind == MediaKind.AUDIO
             LibraryFilter.RECENT -> entry.uri.toString() in recentUris
+            LibraryFilter.FAVORITES -> entry.uri.toString() in favoriteUris
         }
         val matchesSearch = query.isEmpty() ||
             entry.title.lowercase().contains(query) ||
@@ -301,12 +307,19 @@ fun HomeScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     items(visibleMedia, key = { it.uri.toString() }) { entry ->
-                        MediaRow(entry = entry, onClick = {
-                            PlaybackHistoryStore.markPlayed(context, entry.uri.toString())
-                            recentUris = PlaybackHistoryStore.getRecent(context)
-                            val queue = visibleMedia.filter { it.kind == entry.kind }
-                            onPlayMedia(entry.uri.toString(), entry.kind == MediaKind.AUDIO, queue)
-                        })
+                        MediaRow(
+                            entry = entry,
+                            favorite = entry.uri.toString() in favoriteUris,
+                            onToggleFavorite = {
+                                favoriteUris = MediaFavoritesStore.toggle(context, entry.uri.toString())
+                            },
+                            onClick = {
+                                PlaybackHistoryStore.markPlayed(context, entry.uri.toString())
+                                recentUris = PlaybackHistoryStore.getRecent(context)
+                                val queue = visibleMedia.filter { it.kind == entry.kind }
+                                onPlayMedia(entry.uri.toString(), entry.kind == MediaKind.AUDIO, queue)
+                            }
+                        )
                     }
                 }
             }
@@ -460,7 +473,12 @@ private fun EmptyLibrary(
 }
 
 @Composable
-private fun MediaRow(entry: MediaEntry, onClick: () -> Unit) {
+private fun MediaRow(
+    entry: MediaEntry,
+    favorite: Boolean,
+    onToggleFavorite: () -> Unit,
+    onClick: () -> Unit
+) {
     Surface(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
@@ -481,7 +499,14 @@ private fun MediaRow(entry: MediaEntry, onClick: () -> Unit) {
                     overflow = TextOverflow.Ellipsis
                 )
             }
-            Icon(Icons.Default.PlayArrow, contentDescription = "Play", tint = ZvxAccent, modifier = Modifier.padding(start = 8.dp).size(24.dp))
+            IconButton(onClick = onToggleFavorite) {
+                Icon(
+                    imageVector = if (favorite) Icons.Default.Star else Icons.Default.StarBorder,
+                    contentDescription = if (favorite) "Remove from favorites" else "Add to favorites",
+                    tint = if (favorite) ZvxAccent else ZvxMuted
+                )
+            }
+            Icon(Icons.Default.PlayArrow, contentDescription = "Play", tint = ZvxAccent, modifier = Modifier.padding(start = 4.dp).size(24.dp))
         }
     }
 }

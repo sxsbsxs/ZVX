@@ -4,7 +4,8 @@ A clean, modern Android media player with a modular multi-language foundation.
 
 ## Included in this foundation
 
-- Browse local video and audio collections through MediaStore, with search, Video / Audio / Recent filters, folder filtering and sorting by newest, name, duration or size.
+- Browse local video and audio collections through MediaStore, with search, Video / Audio / Recent / Favorites filters, folder filtering and sorting by newest, name, duration or size.
+- Add or remove local media favorites; favorites persist on-device.
 - Show MediaStore video thumbnails and embedded audio album artwork where available.
 - Request media permissions only when the user chooses to build the library; Android 14+ selected-video access is supported.
 - Remember the last 50 played local items and resume playback position on-device.
@@ -14,7 +15,7 @@ A clean, modern Android media player with a modular multi-language foundation.
 - Progressive playback for common media containers when a device has a compatible decoder.
 - Play, pause, seek, skip ±10 seconds with buttons or double-tap left/right on the video, and change playback speed (0.75×–2×).
 - On-screen gestures: horizontal swipe to preview and seek; drag vertically on the left to adjust brightness or the right to adjust media volume; app brightness is restored when leaving the player.
-- Playlist playback from the currently filtered library, with an in-player queue browser, previous / next controls, shuffle and repeat modes.
+- Playlist playback from the currently filtered library, with an in-player queue editor, reorder up/down, remove items, clear upcoming items, previous / next controls, shuffle and repeat modes.
 - Video frame sizing modes: Fit, Fill and Crop; foreground playback sleep timer with 15 / 30 / 45 / 60 minute presets.
 - Background audio playback through Android MediaSessionService with media notification controls; playlist navigation is exposed to system media controls.
 - One-tap immersive landscape playback with transient system bars revealed by swipe; restores the previous orientation and system bars when leaving the player.

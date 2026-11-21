@@ -44,6 +44,9 @@ import androidx.compose.material.icons.filled.Replay10
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -176,6 +179,7 @@ private fun PlayerScreenContent(
     var speedIndex by remember(videoUri) { mutableStateOf(1) }
     var trackDialogVisible by remember(videoUri) { mutableStateOf(false) }
     var queueDialogVisible by remember(videoUri) { mutableStateOf(false) }
+    var editableQueue by remember(videoUri, queue) { mutableStateOf(queue.toList()) }
     var optionsDialogVisible by remember(videoUri) { mutableStateOf(false) }
     var aspectModeIndex by remember(videoUri) { mutableIntStateOf(0) }
     var sleepTimerMinutes by remember(videoUri) { mutableIntStateOf(0) }
@@ -198,7 +202,7 @@ private fun PlayerScreenContent(
         val currentUri = player.currentMediaItem?.localConfiguration?.uri
         if (currentUri != videoUri) {
             val startPosition = savedPosition.takeIf { it >= 5_000L } ?: C.TIME_UNSET
-            val playlist = queue.map { entry ->
+            val playlist = editableQueue.map { entry ->
                 MediaItem.Builder()
                     .setUri(entry.uri)
                     .setMediaMetadata(
@@ -209,7 +213,7 @@ private fun PlayerScreenContent(
                     )
                     .build()
             }
-            val selectedIndex = queue.indexOfFirst { it.uri.toString() == videoUri.toString() }
+            val selectedIndex = editableQueue.indexOfFirst { it.uri.toString() == videoUri.toString() }
             if (playlist.isNotEmpty() && selectedIndex >= 0) {
                 player.setMediaItems(playlist, selectedIndex, startPosition)
             } else {
@@ -872,7 +876,7 @@ private fun PlayerScreenContent(
     if (queueDialogVisible) {
         AlertDialog(
             onDismissRequest = { queueDialogVisible = false },
-            title = { Text("Playback queue", fontWeight = FontWeight.Bold) },
+            title = { Text("Playback queue · ${editableQueue.size}", fontWeight = FontWeight.Bold) },
             text = {
                 Column(
                     modifier = Modifier
@@ -880,30 +884,66 @@ private fun PlayerScreenContent(
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    queue.forEachIndexed { index, entry ->
-                        TextButton(
-                            onClick = {
-                                player.seekTo(index, 0L)
-                                player.play()
-                                queueDialogVisible = false
-                            },
-                            modifier = Modifier.fillMaxWidth()
+                    editableQueue.forEachIndexed { index, entry ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    entry.title,
-                                    color = if (index == currentMediaIndex) Color(0xFFC7F36B) else Color.White,
-                                    maxLines = 1
-                                )
-                                Text(
-                                    entry.artist ?: entry.folderName,
-                                    color = Color.White.copy(alpha = 0.56f),
-                                    fontSize = 11.sp,
-                                    maxLines = 1
-                                )
+                            TextButton(
+                                onClick = {
+                                    player.seekTo(index, 0L)
+                                    player.play()
+                                },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        entry.title,
+                                        color = if (index == currentMediaIndex) Color(0xFFC7F36B) else Color.White,
+                                        maxLines = 1
+                                    )
+                                    Text(
+                                        entry.artist ?: entry.folderName,
+                                        color = Color.White.copy(alpha = 0.56f),
+                                        fontSize = 11.sp,
+                                        maxLines = 1
+                                    )
+                                }
+                                if (index == currentMediaIndex) {
+                                    Text("NOW", color = Color(0xFFC7F36B), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                }
                             }
-                            if (index == currentMediaIndex) {
-                                Text("NOW", color = Color(0xFFC7F36B), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            Column {
+                                IconButton(
+                                    enabled = index > 0,
+                                    onClick = {
+                                        player.moveMediaItem(index, index - 1)
+                                        editableQueue = editableQueue.toMutableList().apply {
+                                            add(index - 1, removeAt(index))
+                                        }
+                                    }
+                                ) {
+                                    Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Move up", tint = Color.White)
+                                }
+                                IconButton(
+                                    enabled = index < editableQueue.lastIndex,
+                                    onClick = {
+                                        player.moveMediaItem(index, index + 1)
+                                        editableQueue = editableQueue.toMutableList().apply {
+                                            add(index + 1, removeAt(index))
+                                        }
+                                    }
+                                ) {
+                                    Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Move down", tint = Color.White)
+                                }
+                            }
+                            IconButton(
+                                onClick = {
+                                    player.removeMediaItem(index)
+                                    editableQueue = editableQueue.toMutableList().apply { removeAt(index) }
+                                }
+                            ) {
+                                Icon(Icons.Default.Delete, contentDescription = "Remove from queue", tint = Color(0xFFE58C83))
                             }
                         }
                     }
@@ -937,6 +977,26 @@ private fun PlayerScreenContent(
                                 }
                             )
                         }
+                    }
+                    TextButton(
+                        onClick = {
+                            val playingItem = player.currentMediaItem
+                            val playingEntry = editableQueue.getOrNull(player.currentMediaItemIndex)
+                            if (playingItem != null) {
+                                val oldIndex = player.currentMediaItemIndex
+                                if (oldIndex + 1 < player.mediaItemCount) {
+                                    player.removeMediaItems(oldIndex + 1, player.mediaItemCount)
+                                }
+                                if (oldIndex > 0) {
+                                    player.removeMediaItems(0, oldIndex)
+                                }
+                                editableQueue = listOfNotNull(playingEntry)
+                                queueDialogVisible = false
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Clear queue · keep current")
                     }
                 }
             },
