@@ -53,6 +53,8 @@ class MultiLanguageLayoutTest(unittest.TestCase):
         home = (verify_multilang.ROOT / "app/src/main/java/com/zvx/player/ui/HomeScreen.kt").read_text()
         self.assertIn("MediaFavoritesStore.toggle", home)
         self.assertIn("FAVORITES", home)
+        self.assertIn("parseM3uPlaylist(content)", home)
+        self.assertIn("Import M3U playlist", home)
         home = (verify_multilang.ROOT / "app/src/main/java/com/zvx/player/ui/HomeScreen.kt").read_text()
         self.assertIn("List<MediaEntry>", home)
         self.assertIn("PictureInPictureParams.Builder", kotlin)

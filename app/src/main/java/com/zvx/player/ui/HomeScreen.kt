@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
@@ -113,6 +114,8 @@ fun HomeScreen(
     var selectedSort by remember { mutableStateOf(LibrarySort.NEWEST) }
     var showSortDialog by remember { mutableStateOf(false) }
     var showStreamDialog by remember { mutableStateOf(false) }
+    var importPlaylistUri by remember { mutableStateOf<Uri?>(null) }
+    var playlistImportError by remember { mutableStateOf<String?>(null) }
     var reloadToken by remember { mutableIntStateOf(0) }
     var isLoading by remember { mutableStateOf(false) }
 
@@ -121,6 +124,51 @@ fun HomeScreen(
     ) {
         access = MediaPermission.current(context)
         reloadToken++
+    }
+
+    val playlistLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { selectedUri ->
+        if (selectedUri != null) {
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    selectedUri,
+                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            } catch (_: SecurityException) {
+                // The provider may grant temporary read access only.
+            }
+            playlistImportError = null
+            importPlaylistUri = selectedUri
+        }
+    }
+
+    LaunchedEffect(importPlaylistUri) {
+        val selectedUri = importPlaylistUri ?: return@LaunchedEffect
+        importPlaylistUri = null
+        val content = withContext(Dispatchers.IO) {
+            runCatching {
+                context.contentResolver.openInputStream(selectedUri)
+                    ?.bufferedReader(Charsets.UTF_8)
+                    ?.use { it.readText() }
+            }.getOrNull()
+        }
+        if (content.isNullOrBlank()) {
+            playlistImportError = "Unable to read this playlist file."
+        } else {
+            val imported = parseM3uPlaylist(content)
+            if (imported.isEmpty()) {
+                playlistImportError = "No usable absolute media URLs or file URIs were found. Relative paths are not supported yet."
+            } else {
+                val selectedKind = imported.first().kind
+                val playableQueue = imported.filter { it.kind == selectedKind }
+                onPlayMedia(
+                    playableQueue.first().uri.toString(),
+                    selectedKind == MediaKind.AUDIO,
+                    playableQueue
+                )
+            }
+        }
     }
 
     LaunchedEffect(access, reloadToken) {
@@ -190,6 +238,15 @@ fun HomeScreen(
                 }
                 IconButton(onClick = onChooseFile) {
                     Icon(Icons.Default.FolderOpen, contentDescription = "Open file", tint = ZvxText)
+                }
+                IconButton(
+                    onClick = {
+                        playlistLauncher.launch(
+                            arrayOf("audio/x-mpegurl", "application/vnd.apple.mpegurl", "text/plain", "application/octet-stream")
+                        )
+                    }
+                ) {
+                    Icon(Icons.Default.PlaylistAdd, contentDescription = "Import M3U playlist", tint = ZvxAccent)
                 }
                 IconButton(onClick = { showStreamDialog = true }) {
                     Icon(Icons.Default.Link, contentDescription = "Play from URL", tint = ZvxAccent)
@@ -354,6 +411,20 @@ fun HomeScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showSortDialog = false }) { Text("Done") }
+            },
+            containerColor = ZvxSurface,
+            titleContentColor = ZvxText,
+            textContentColor = ZvxMuted
+        )
+    }
+
+    if (playlistImportError != null) {
+        AlertDialog(
+            onDismissRequest = { playlistImportError = null },
+            title = { Text("Playlist import") },
+            text = { Text(playlistImportError.orEmpty()) },
+            confirmButton = {
+                TextButton(onClick = { playlistImportError = null }) { Text("OK") }
             },
             containerColor = ZvxSurface,
             titleContentColor = ZvxText,
@@ -569,6 +640,48 @@ private fun MediaThumbnail(entry: MediaEntry, modifier: Modifier = Modifier) {
             )
         }
     }
+}
+
+
+private fun parseM3uPlaylist(content: String): List<MediaEntry> {
+    val audioExtensions = setOf("mp3", "m4a", "aac", "flac", "wav", "ogg", "opus", "wma")
+    val result = mutableListOf<MediaEntry>()
+    var pendingTitle: String? = null
+
+    content.lineSequence().forEach { rawLine ->
+        val line = rawLine.trim().removePrefix("\uFEFF")
+        if (line.isBlank()) return@forEach
+        if (line.startsWith("#EXTINF:", ignoreCase = true)) {
+            pendingTitle = line.substringAfter(',', "").trim().takeIf { it.isNotBlank() }
+            return@forEach
+        }
+        if (line.startsWith("#")) return@forEach
+
+        val parsed = runCatching { Uri.parse(line) }.getOrNull() ?: return@forEach
+        val mediaUri = when (parsed.scheme?.lowercase()) {
+            "http", "https", "content", "file" -> parsed
+            else -> if (line.startsWith("/")) Uri.fromFile(java.io.File(line)) else null
+        } ?: return@forEach
+        val displayName = mediaUri.lastPathSegment?.substringAfterLast('/')?.takeIf { it.isNotBlank() }
+            ?: "Playlist item " + (result.size + 1)
+        val extension = displayName.substringAfterLast('.', "").lowercase()
+        val kind = if (extension in audioExtensions) MediaKind.AUDIO else MediaKind.VIDEO
+        val title = pendingTitle ?: displayName.substringBeforeLast('.', displayName)
+        result += MediaEntry(
+            id = (result.size + 1).toLong(),
+            uri = mediaUri,
+            title = title,
+            displayName = displayName,
+            mimeType = if (kind == MediaKind.AUDIO) "audio/*" else "video/*",
+            durationMs = 0L,
+            sizeBytes = 0L,
+            dateAddedSeconds = 0L,
+            folderName = "M3U playlist",
+            kind = kind
+        )
+        pendingTitle = null
+    }
+    return result
 }
 
 private fun MediaEntry.subtitleLine(): String {

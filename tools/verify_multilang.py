@@ -51,6 +51,7 @@ def main():
         "Player supports horizontal swipe-to-seek": "gestureMode == 1" in kotlin and "horizontalSeekDelta" in kotlin and "Seek to " in kotlin,
         "Queue can be reordered, edited and cleared": "moveMediaItem(index, index - 1)" in kotlin and "removeMediaItem(index)" in kotlin and "Clear queue" in kotlin,
         "Media library supports persistent favorites": "MediaFavoritesStore.toggle" in (ROOT / "app/src/main/java/com/zvx/player/ui/HomeScreen.kt").read_text() and "FAVORITES" in (ROOT / "app/src/main/java/com/zvx/player/ui/HomeScreen.kt").read_text(),
+        "Home screen can import M3U playlists": "parseM3uPlaylist(content)" in (ROOT / "app/src/main/java/com/zvx/player/ui/HomeScreen.kt").read_text() and "Import M3U playlist" in (ROOT / "app/src/main/java/com/zvx/player/ui/HomeScreen.kt").read_text(),
     }
     for label, passed in checks.items():
         print(f"[{'OK' if passed else 'FAIL'}] {label}")
