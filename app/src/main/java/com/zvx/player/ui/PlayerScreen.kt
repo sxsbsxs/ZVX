@@ -61,6 +61,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -85,6 +86,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.C
+import androidx.media3.common.Format
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.MimeTypes
@@ -100,6 +102,7 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.CaptionStyleCompat
 import androidx.media3.ui.PlayerView
 import com.zvx.player.data.PlaybackProgressStore
+import com.zvx.player.data.PlaybackDiagnostics
 import com.zvx.player.data.PlaybackSettingsStore
 import com.zvx.player.data.PlaybackPreferences
 import com.zvx.player.data.SubtitleTimeline
@@ -206,6 +209,9 @@ private fun PlayerScreenContent(
     var playbackError by remember(videoUri) { mutableStateOf<String?>(null) }
     var speedIndex by remember(videoUri) { mutableIntStateOf(storedPreferences.speedIndex) }
     var trackDialogVisible by remember(videoUri) { mutableStateOf(false) }
+    var diagnosticsDialogVisible by remember(videoUri) { mutableStateOf(false) }
+    var videoQualityAuto by remember(player) { mutableStateOf(true) }
+    val playbackDiagnostics by PlaybackDiagnostics.snapshot.collectAsState()
     var queueDialogVisible by remember(videoUri) { mutableStateOf(false) }
     var showPlayerMenu by remember(videoUri) { mutableStateOf(false) }
     var editableQueue by remember(videoUri, queue) { mutableStateOf(queue.toList()) }
@@ -815,9 +821,19 @@ private fun PlayerScreenContent(
                                     onClick = { showPlayerMenu = false; queueDialogVisible = true }
                                 )
                             }
+                            if (!isAudio) {
+                                DropdownMenuItem(
+                                    text = { Text(tr("Video quality", languageCode)) },
+                                    onClick = { showPlayerMenu = false; trackDialogVisible = true }
+                                )
+                            }
                             DropdownMenuItem(
                                 text = { Text(tr("Audio and subtitles", languageCode)) },
                                 onClick = { showPlayerMenu = false; trackDialogVisible = true }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(tr("Playback diagnostics", languageCode)) },
+                                onClick = { showPlayerMenu = false; diagnosticsDialogVisible = true }
                             )
                             DropdownMenuItem(
                                 text = { Text("${tr("Playback speed", languageCode)} · ${speeds[speedIndex]}×") },
@@ -1270,11 +1286,85 @@ private fun PlayerScreenContent(
         )
     }
 
+    if (diagnosticsDialogVisible) {
+        val bufferedAheadMs = (player.bufferedPosition - currentPosition).coerceAtLeast(0L)
+        val videoResolution = if (playbackDiagnostics.width > 0 && playbackDiagnostics.height > 0) {
+            "${playbackDiagnostics.width} × ${playbackDiagnostics.height}"
+        } else {
+            tr("Not available yet", languageCode)
+        }
+        val frameRateText = playbackDiagnostics.frameRate
+            .takeIf { it > 0f }
+            ?.let { String.format(java.util.Locale.US, "%.2f fps", it) }
+            ?: tr("Not available yet", languageCode)
+        val bitrateText = playbackDiagnostics.bitrate
+            .takeIf { it > 0 }
+            ?.let { String.format(java.util.Locale.US, "%.1f Mbps", it / 1_000_000f) }
+            ?: tr("Not available yet", languageCode)
+        val playbackStateText = when (player.playbackState) {
+            Player.STATE_BUFFERING -> tr("Buffering", languageCode)
+            Player.STATE_READY -> tr("Ready", languageCode)
+            Player.STATE_ENDED -> tr("Ended", languageCode)
+            else -> tr("Idle", languageCode)
+        }
+        AlertDialog(
+            onDismissRequest = { diagnosticsDialogVisible = false },
+            title = { Text(tr("Playback diagnostics", languageCode), fontWeight = FontWeight.Bold) },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(tr("Actual video", languageCode) + " · " + videoResolution, color = ZvxText, fontSize = 13.sp)
+                    Text(tr("Frame rate", languageCode) + " · " + frameRateText, color = ZvxMuted, fontSize = 12.sp)
+                    Text(tr("Bitrate", languageCode) + " · " + bitrateText, color = ZvxMuted, fontSize = 12.sp)
+                    Text(tr("Codec", languageCode) + " · " + playbackDiagnostics.mimeType.ifBlank { tr("Not available yet", languageCode) }, color = ZvxMuted, fontSize = 12.sp)
+                    Text(tr("Decoder", languageCode) + " · " + playbackDiagnostics.decoderName.ifBlank { tr("Waiting for decoder", languageCode) }, color = ZvxMuted, fontSize = 12.sp)
+                    Text(tr("Dropped frames", languageCode) + " · " + playbackDiagnostics.droppedFrames, color = if (playbackDiagnostics.droppedFrames > 0) Color(0xFFFFB86B) else ZvxMuted, fontSize = 12.sp)
+                    Text(tr("Decoder startup", languageCode) + " · " + playbackDiagnostics.decoderInitializationMs + " ms", color = ZvxMuted, fontSize = 12.sp)
+                    Text(tr("Buffered ahead", languageCode) + " · " + String.format(java.util.Locale.US, "%.1f s", bufferedAheadMs / 1_000f), color = ZvxMuted, fontSize = 12.sp)
+                    Text(tr("Playback state", languageCode) + " · " + playbackStateText + if (player.isLoading) " · " + tr("Loading", languageCode) else "", color = ZvxMuted, fontSize = 12.sp)
+                    if (playbackDiagnostics.codecError.isNotBlank()) {
+                        Text(tr("Codec error", languageCode) + " · " + playbackDiagnostics.codecError, color = Color(0xFFFF8A80), fontSize = 11.sp)
+                    }
+                    Text(
+                        tr("Use this report to tell low source quality from decoder drops or network buffering.", languageCode),
+                        color = ZvxMuted,
+                        fontSize = 11.sp
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { diagnosticsDialogVisible = false }) {
+                    Text(tr("Done", languageCode))
+                }
+            }
+        )
+    }
+
     if (trackDialogVisible) {
         TrackSelectionDialog(
             tracks = availableTracks,
-            onDismiss = { trackDialogVisible = false },
             languageCode = languageCode,
+            videoQualityAuto = videoQualityAuto,
+            onDismiss = { trackDialogVisible = false },
+            onVideoAuto = {
+                player.trackSelectionParameters = player.trackSelectionParameters
+                    .buildUpon()
+                    .clearOverridesOfType(C.TRACK_TYPE_VIDEO)
+                    .setTrackTypeDisabled(C.TRACK_TYPE_VIDEO, false)
+                    .build()
+                videoQualityAuto = true
+            },
+            onSelectVideo = { group, trackIndex ->
+                player.trackSelectionParameters = player.trackSelectionParameters
+                    .buildUpon()
+                    .clearOverridesOfType(C.TRACK_TYPE_VIDEO)
+                    .setTrackTypeDisabled(C.TRACK_TYPE_VIDEO, false)
+                    .setOverrideForType(TrackSelectionOverride(group.mediaTrackGroup, trackIndex))
+                    .build()
+                videoQualityAuto = false
+            },
             onSelectAudio = { group, trackIndex ->
                 player.trackSelectionParameters = player.trackSelectionParameters
                     .buildUpon()
@@ -1315,18 +1405,22 @@ private fun PlayerScreenContent(
 private fun TrackSelectionDialog(
     tracks: Tracks,
     languageCode: String,
+    videoQualityAuto: Boolean,
     onDismiss: () -> Unit,
+    onVideoAuto: () -> Unit,
+    onSelectVideo: (Tracks.Group, Int) -> Unit,
     onSelectAudio: (Tracks.Group, Int) -> Unit,
     onSelectSubtitle: (Tracks.Group, Int) -> Unit,
     onSubtitleOff: () -> Unit,
     onLoadExternalSubtitle: () -> Unit
 ) {
+    val videoGroups = tracks.groups.filter { it.type == C.TRACK_TYPE_VIDEO }
     val audioGroups = tracks.groups.filter { it.type == C.TRACK_TYPE_AUDIO }
     val subtitleGroups = tracks.groups.filter { it.type == C.TRACK_TYPE_TEXT }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(tr("Audio & subtitles", languageCode), fontWeight = FontWeight.Bold) },
+        title = { Text(tr("Playback quality & tracks", languageCode), fontWeight = FontWeight.Bold) },
         text = {
             Column(
                 modifier = Modifier
@@ -1334,6 +1428,31 @@ private fun TrackSelectionDialog(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
+                Text(tr("VIDEO QUALITY", languageCode), color = ZvxMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                TrackOption(
+                    label = tr("Auto (recommended)", languageCode),
+                    languageCode = languageCode,
+                    selected = videoQualityAuto,
+                    onClick = onVideoAuto
+                )
+                if (videoGroups.isEmpty()) {
+                    Text(tr("No video tracks reported by this source.", languageCode), color = Color.LightGray, fontSize = 13.sp)
+                } else {
+                    videoGroups.forEach { group ->
+                        for (index in 0 until group.length) {
+                            val format = group.getTrackFormat(index)
+                            TrackOption(
+                                label = videoTrackLabel(format, index, languageCode),
+                                languageCode = languageCode,
+                                selected = group.isTrackSelected(index),
+                                enabled = group.isTrackSupported(index),
+                                onClick = { onSelectVideo(group, index) }
+                            )
+                        }
+                    }
+                }
+
+                Spacer(Modifier.size(4.dp))
                 Text(tr("AUDIO", languageCode), color = ZvxMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 if (audioGroups.isEmpty()) {
                     Text(tr("No audio tracks reported by this source.", languageCode), color = Color.LightGray, fontSize = 13.sp)
@@ -1420,6 +1539,21 @@ private fun TrackOption(
             Icon(Icons.Default.Check, contentDescription = tr("Selected", languageCode), tint = ZvxAccent)
         }
     }
+}
+
+private fun videoTrackLabel(format: Format, index: Int, languageCode: String): String {
+    val resolution = if (format.width > 0 && format.height > 0) {
+        "${format.width} × ${format.height}"
+    } else {
+        tr("Unknown resolution", languageCode)
+    }
+    val frameRate = format.frameRate.takeIf { it > 0f }
+        ?.let { " · " + String.format(java.util.Locale.US, "%.0f fps", it) }
+        .orEmpty()
+    val bitrate = format.bitrate.takeIf { it > 0 }
+        ?.let { " · " + String.format(java.util.Locale.US, "%.1f Mbps", it / 1_000_000f) }
+        .orEmpty()
+    return resolution + frameRate + bitrate
 }
 
 private fun trackLabel(
