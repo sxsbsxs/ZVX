@@ -30,6 +30,8 @@ class MultiLanguageLayoutTest(unittest.TestCase):
         self.assertIn("setStreamVolume", kotlin)
         self.assertIn("attributes.screenBrightness = originalScreenBrightness", kotlin)
         self.assertIn("MediaSession.Builder", service)
+        self.assertIn("MediaController.Builder", kotlin)
+        self.assertIn("SessionToken", kotlin)
         self.assertIn("foregroundServiceType=\"mediaPlayback\"", manifest)
 
 

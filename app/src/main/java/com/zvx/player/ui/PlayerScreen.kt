@@ -1,12 +1,12 @@
 package com.zvx.player.ui
 
 import android.app.Activity
+import android.content.ComponentName
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
 import android.media.AudioManager
 import android.net.Uri
-import android.content.Intent
 import androidx.core.content.ContextCompat
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -72,16 +72,17 @@ import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.Tracks
-import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.session.MediaController
+import androidx.media3.session.SessionToken
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import com.zvx.player.data.PlaybackProgressStore
-import com.zvx.player.PlaybackPlayerHolder
-import com.zvx.player.PlaybackService
 import com.zvx.player.platform.NativeMediaBridge
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
+@OptIn(UnstableApi::class)
 @Composable
 fun PlayerScreen(
     videoUri: Uri,
@@ -90,14 +91,66 @@ fun PlayerScreen(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
+    val sessionToken = remember(context) {
+        SessionToken(context, ComponentName(context, com.zvx.player.PlaybackService::class.java))
+    }
+    val controllerFuture = remember(sessionToken) {
+        MediaController.Builder(context, sessionToken).buildAsync()
+    }
+    var controller by remember(controllerFuture) { mutableStateOf<MediaController?>(null) }
+    var connectionError by remember(controllerFuture) { mutableStateOf<String?>(null) }
+
+    DisposableEffect(controllerFuture) {
+        val listener = Runnable {
+            try {
+                controller = controllerFuture.get()
+            } catch (error: Exception) {
+                connectionError = error.message ?: "Unable to connect to the playback service."
+            }
+        }
+        controllerFuture.addListener(listener, ContextCompat.getMainExecutor(context))
+        onDispose {
+            MediaController.releaseFuture(controllerFuture)
+        }
+    }
+
+    val activeController = controller
+    if (activeController == null) {
+        Box(
+            modifier = modifier.fillMaxSize().background(Color.Black),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                connectionError ?: "Connecting to ZVX player…",
+                color = Color.White
+            )
+        }
+    } else {
+        PlayerScreenContent(
+            videoUri = videoUri,
+            modifier = modifier,
+            isAudio = isAudio,
+            onBack = onBack,
+            player = activeController
+        )
+    }
+}
+
+@Composable
+private fun PlayerScreenContent(
+    videoUri: Uri,
+    modifier: Modifier,
+    isAudio: Boolean,
+    onBack: () -> Unit,
+    player: Player
+) {
+    val context = LocalContext.current
     val activity = remember(context) { context.findActivity() }
     val audioManager = remember(context) { context.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
     val originalScreenBrightness = remember(activity) { activity?.window?.attributes?.screenBrightness ?: -1f }
     val savedPosition = remember(videoUri) {
         PlaybackProgressStore.getPosition(context, videoUri.toString())
     }
-    val player = remember(context) { PlaybackPlayerHolder.get(context) }
-
     var controlsVisible by remember(videoUri) { mutableStateOf(true) }
     var isPlaying by remember(videoUri) { mutableStateOf(true) }
     var currentPosition by remember(videoUri) { mutableLongStateOf(0L) }
@@ -131,7 +184,6 @@ fun PlayerScreen(
             player.setMediaItem(mediaItem, startPosition)
             player.prepare()
         }
-        ContextCompat.startForegroundService(context, Intent(context, PlaybackService::class.java))
         player.playWhenReady = true
         player.play()
     }

@@ -14,7 +14,6 @@ def required_files():
         "app/src/main/cpp/zvx_native.cpp",
         "app/src/main/java/com/zvx/player/ui/PlayerScreen.kt",
         "app/src/main/java/com/zvx/player/PlaybackService.kt",
-        "app/src/main/java/com/zvx/player/PlaybackPlayerHolder.kt",
         "app/build.gradle.kts",
     ]
 
@@ -43,6 +42,7 @@ def main():
         "Player supports vertical brightness and volume gestures": "detectDragGestures" in kotlin and "screenBrightness" in kotlin and "setStreamVolume" in kotlin,
         "Player restores app brightness after exit": "originalScreenBrightness" in kotlin and "attributes.screenBrightness = originalScreenBrightness" in kotlin,
         "Media session service is registered": "MediaSessionService" in manifest and "foregroundServiceType=\"mediaPlayback\"" in manifest and "MediaSession.Builder" in service,
+        "Player UI connects through MediaController": "MediaController.Builder" in kotlin and "SessionToken" in kotlin and "releaseFuture(controllerFuture)" in kotlin,
     }
     for label, passed in checks.items():
         print(f"[{'OK' if passed else 'FAIL'}] {label}")
