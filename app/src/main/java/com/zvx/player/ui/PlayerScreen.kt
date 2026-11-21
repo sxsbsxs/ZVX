@@ -302,6 +302,14 @@ private fun PlayerScreenContent(
                 currentMediaIndex = player.currentMediaItemIndex
             }
 
+            override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
+                shuffleEnabled = shuffleModeEnabled
+            }
+
+            override fun onRepeatModeChanged(repeatModeValue: Int) {
+                repeatMode = repeatModeValue
+            }
+
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                 currentMediaIndex = player.currentMediaItemIndex
                 queueSize = player.mediaItemCount
@@ -600,7 +608,7 @@ private fun PlayerScreenContent(
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    if (player.mediaItemCount > 1) {
+                    if (queueSize > 1) {
                         IconButton(
                             onClick = { player.seekToPreviousMediaItem() },
                             enabled = player.hasPreviousMediaItem(),
@@ -670,7 +678,7 @@ private fun PlayerScreenContent(
                             modifier = Modifier.size(32.dp)
                         )
                     }
-                    if (player.mediaItemCount > 1) {
+                    if (queueSize > 1) {
                         IconButton(
                             onClick = { player.seekToNextMediaItem() },
                             enabled = player.hasNextMediaItem(),
