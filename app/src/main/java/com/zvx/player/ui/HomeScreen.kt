@@ -373,7 +373,7 @@ fun HomeScreen(
                                     overflow = TextOverflow.Ellipsis
                                 )
                             }
-                            Text("PLAY", color = ZvxAccent, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            Text(tr("PLAY", languageCode), color = ZvxAccent, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -477,6 +477,7 @@ fun HomeScreen(
                     items(visibleMedia, key = { it.uri.toString() }) { entry ->
                         MediaRow(
                             entry = entry,
+                            languageCode = languageCode,
                             favorite = entry.uri.toString() in favoriteUris,
                             onToggleFavorite = {
                                 favoriteUris = MediaFavoritesStore.toggle(context, entry.uri.toString())
@@ -548,13 +549,13 @@ fun HomeScreen(
                     PlaybackHistoryStore.clear(context)
                     recentUris = emptyList()
                     showClearHistoryDialog = false
-                }) { Text("Clear", color = MaterialTheme.colorScheme.error) }
+                }) { Text(tr("Clear", languageCode), color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = {
                 TextButton(onClick = {
                     showClearHistoryDialog = false
                     showSettingsDialog = !showHistoryScreen
-                }) { Text("Cancel") }
+                }) { Text(tr("Cancel", languageCode)) }
             },
             containerColor = ZvxSurface,
             titleContentColor = ZvxText,
@@ -572,13 +573,13 @@ fun HomeScreen(
                     MediaFavoritesStore.clear(context)
                     favoriteUris = emptyList()
                     showClearFavoritesDialog = false
-                }) { Text("Clear", color = MaterialTheme.colorScheme.error) }
+                }) { Text(tr("Clear", languageCode), color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = {
                 TextButton(onClick = {
                     showClearFavoritesDialog = false
                     showSettingsDialog = !showFavoritesScreen
-                }) { Text("Cancel") }
+                }) { Text(tr("Cancel", languageCode)) }
             },
             containerColor = ZvxSurface,
             titleContentColor = ZvxText,
@@ -606,14 +607,14 @@ fun HomeScreen(
                                 modifier = Modifier.weight(1f)
                             )
                             if (selectedSort == sort) {
-                                Icon(Icons.Default.PlayArrow, contentDescription = "Selected", tint = ZvxAccent)
+                                Icon(Icons.Default.PlayArrow, contentDescription = tr("Selected", languageCode), tint = ZvxAccent)
                             }
                         }
                     }
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showSortDialog = false }) { Text("Done") }
+                TextButton(onClick = { showSortDialog = false }) { Text(tr("Done", languageCode)) }
             },
             containerColor = ZvxSurface,
             titleContentColor = ZvxText,
@@ -624,10 +625,10 @@ fun HomeScreen(
     if (playlistImportError != null) {
         AlertDialog(
             onDismissRequest = { playlistImportError = null },
-            title = { Text("Playlist import") },
+            title = { Text(tr("Playlist import", languageCode)) },
             text = { Text(playlistImportError.orEmpty()) },
             confirmButton = {
-                TextButton(onClick = { playlistImportError = null }) { Text("OK") }
+                TextButton(onClick = { playlistImportError = null }) { Text(tr("OK", languageCode)) }
             },
             containerColor = ZvxSurface,
             titleContentColor = ZvxText,
@@ -637,6 +638,7 @@ fun HomeScreen(
 
     if (showStreamDialog) {
         StreamDialog(
+            languageCode = languageCode,
             onDismiss = { showStreamDialog = false },
             onOpen = { address ->
                 showStreamDialog = false
@@ -733,7 +735,7 @@ private fun FavoritesScreen(
                                 Text(entry.folderName, color = ZvxMuted.copy(alpha = 0.7f), fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
                             IconButton(onClick = { onRemove(entry.uri.toString()) }) {
-                                Icon(Icons.Default.Star, contentDescription = "Remove from favorites", tint = ZvxAccent)
+                                Icon(Icons.Default.Star, contentDescription = tr("Remove from favorites", languageCode), tint = ZvxAccent)
                             }
                         }
                     }
@@ -808,12 +810,12 @@ private fun PlaybackHistoryScreen(
                             IconButton(onClick = { onToggleFavorite(entry.uri.toString()) }) {
                                 Icon(
                                     imageVector = if (entry.uri.toString() in favoriteUris) Icons.Default.Star else Icons.Default.StarBorder,
-                                    contentDescription = "Toggle favorite",
+                                    contentDescription = tr("Toggle favorite", languageCode),
                                     tint = if (entry.uri.toString() in favoriteUris) ZvxAccent else ZvxMuted
                                 )
                             }
                             IconButton(onClick = { onRemove(entry.uri.toString()) }) {
-                                Icon(Icons.Default.Delete, contentDescription = "Remove from history", tint = MaterialTheme.colorScheme.error)
+                                Icon(Icons.Default.Delete, contentDescription = tr("Remove from history", languageCode), tint = MaterialTheme.colorScheme.error)
                             }
                         }
                     }
@@ -928,6 +930,7 @@ private fun EmptyLibrary(
 @Composable
 private fun MediaRow(
     entry: MediaEntry,
+    languageCode: String,
     favorite: Boolean,
     onToggleFavorite: () -> Unit,
     onClick: () -> Unit
@@ -945,7 +948,7 @@ private fun MediaRow(
                 Text(entry.title, color = ZvxText, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(entry.subtitleLine(), color = ZvxMuted, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(
-                    entry.folderName + "  ·  " + formatDuration(entry.durationMs) + "  ·  " + formatBytes(entry.sizeBytes),
+                    entry.folderName + "  ·  " + formatDuration(entry.durationMs) + "  ·  " + formatBytes(entry.sizeBytes, languageCode),
                     color = ZvxMuted.copy(alpha = 0.72f),
                     fontSize = 10.sp,
                     maxLines = 1,
@@ -955,11 +958,11 @@ private fun MediaRow(
             IconButton(onClick = onToggleFavorite) {
                 Icon(
                     imageVector = if (favorite) Icons.Default.Star else Icons.Default.StarBorder,
-                    contentDescription = if (favorite) "Remove from favorites" else "Add to favorites",
+                    contentDescription = tr(if (favorite) "Remove from favorites" else "Add to favorites", languageCode),
                     tint = if (favorite) ZvxAccent else ZvxMuted
                 )
             }
-            Icon(Icons.Default.PlayArrow, contentDescription = "Play", tint = ZvxAccent, modifier = Modifier.padding(start = 4.dp).size(24.dp))
+            Icon(Icons.Default.PlayArrow, contentDescription = tr("Play", languageCode), tint = ZvxAccent, modifier = Modifier.padding(start = 4.dp).size(24.dp))
         }
     }
 }
@@ -1130,14 +1133,15 @@ private fun formatDuration(milliseconds: Long): String {
     else "%d:%02d".format(seconds / 60L, remaining)
 }
 
-private fun formatBytes(bytes: Long): String {
-    if (bytes <= 0L) return "Unknown size"
+private fun formatBytes(bytes: Long, languageCode: String): String {
+    if (bytes <= 0L) return tr("Unknown size", languageCode)
     val mb = bytes / (1024.0 * 1024.0)
     return if (mb >= 1024.0) "%.1f GB".format(mb / 1024.0) else "%.0f MB".format(mb)
 }
 
 @Composable
 private fun StreamDialog(
+    languageCode: String,
     onDismiss: () -> Unit,
     onOpen: (String) -> Unit
 ) {
@@ -1146,21 +1150,21 @@ private fun StreamDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Play from a link", fontWeight = FontWeight.Bold) },
+        title = { Text(tr("Play from a link", languageCode), fontWeight = FontWeight.Bold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Paste a direct video, audio, HLS or DASH URL.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(tr("Paste a direct video, audio, HLS or DASH URL.", languageCode), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 OutlinedTextField(
                     value = address,
                     onValueChange = { address = it; error = null },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    label = { Text("Media URL") },
+                    label = { Text(tr("Media URL", languageCode)) },
                     placeholder = { Text("https://example.com/video.m3u8") },
                     isError = error != null
                 )
                 if (error != null) {
-                    Text(error.orEmpty(), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                    Text(tr(error.orEmpty(), languageCode), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                 }
             }
         },
@@ -1172,9 +1176,9 @@ private fun StreamDialog(
                     parsed.scheme?.lowercase() in setOf("http", "https") &&
                     !parsed.host.isNullOrBlank()
                 if (valid) onOpen(candidate) else error = "Enter a valid HTTP or HTTPS address."
-            }) { Text("Play", color = ZvxAccent, fontWeight = FontWeight.Bold) }
+            }) { Text(tr("Play", languageCode), color = ZvxAccent, fontWeight = FontWeight.Bold) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(tr("Cancel", languageCode)) } },
         containerColor = ZvxSurface,
         titleContentColor = ZvxText,
         textContentColor = ZvxMuted

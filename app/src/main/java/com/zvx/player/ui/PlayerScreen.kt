@@ -697,7 +697,7 @@ private fun PlayerScreenContent(
                     ) {
                         Image(
                             bitmap = artwork,
-                            contentDescription = "Album artwork",
+                            contentDescription = tr("Album artwork", languageCode),
                             modifier = Modifier.fillMaxSize().padding(5.dp).clip(RoundedCornerShape(26.dp)),
                             contentScale = ContentScale.Crop
                         )
@@ -782,7 +782,7 @@ private fun PlayerScreenContent(
             ) {
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = leavePlayer) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                        Icon(Icons.Default.ArrowBack, contentDescription = tr("Back", languageCode), tint = Color.White)
                     }
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
@@ -837,7 +837,7 @@ private fun PlayerScreenContent(
                                     }
                                 }
                             ) {
-                                Text("PiP", color = Color.White, fontWeight = FontWeight.Bold)
+                                Text(tr("PiP", languageCode), color = Color.White, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -849,7 +849,7 @@ private fun PlayerScreenContent(
                     IconButton(onClick = { trackDialogVisible = true }) {
                         Icon(
                             Icons.Default.Tune,
-                            contentDescription = "Audio and subtitle tracks",
+                            contentDescription = tr("Audio and subtitle tracks", languageCode),
                             tint = Color.White
                         )
                     }
@@ -877,7 +877,7 @@ private fun PlayerScreenContent(
                             enabled = player.hasPreviousMediaItem(),
                             modifier = Modifier.size(42.dp)
                         ) {
-                            Icon(Icons.Default.SkipPrevious, contentDescription = "Previous item", tint = Color.White)
+                            Icon(Icons.Default.SkipPrevious, contentDescription = tr("Previous item", languageCode), tint = Color.White)
                         }
                     }
                     IconButton(
@@ -893,7 +893,7 @@ private fun PlayerScreenContent(
                     ) {
                         Icon(
                             Icons.Default.Replay10,
-                            contentDescription = "Back 10 seconds",
+                            contentDescription = tr("Back 10 seconds", languageCode),
                             tint = Color.White,
                             modifier = Modifier.size(32.dp)
                         )
@@ -916,7 +916,7 @@ private fun PlayerScreenContent(
                         ) {
                             Icon(
                                 imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                                contentDescription = if (isPlaying) "Pause" else "Play",
+                                contentDescription = tr(if (isPlaying) "Pause" else "Play", languageCode),
                                 tint = Color.White,
                                 modifier = Modifier.size(38.dp)
                             )
@@ -936,7 +936,7 @@ private fun PlayerScreenContent(
                     ) {
                         Icon(
                             Icons.Default.Forward10,
-                            contentDescription = "Forward 10 seconds",
+                            contentDescription = tr("Forward 10 seconds", languageCode),
                             tint = Color.White,
                             modifier = Modifier.size(32.dp)
                         )
@@ -947,7 +947,7 @@ private fun PlayerScreenContent(
                             enabled = player.hasNextMediaItem(),
                             modifier = Modifier.size(42.dp)
                         ) {
-                            Icon(Icons.Default.SkipNext, contentDescription = "Next item", tint = Color.White)
+                            Icon(Icons.Default.SkipNext, contentDescription = tr("Next item", languageCode), tint = Color.White)
                         }
                     }
                 }
@@ -997,10 +997,10 @@ private fun PlayerScreenContent(
                     modifier = Modifier.padding(20.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text("Playback information", color = Color.White, fontWeight = FontWeight.Bold)
+                    Text(tr("Playback information", languageCode), color = Color.White, fontWeight = FontWeight.Bold)
                     Text(playbackError.orEmpty(), color = Color.White.copy(alpha = 0.72f), fontSize = 12.sp)
                     Text(
-                        "Check the media source and supported formats.",
+                        tr("Check the media source and supported formats.", languageCode),
                         color = Color.White.copy(alpha = 0.6f),
                         fontSize = 11.sp
                     )
@@ -1071,7 +1071,7 @@ private fun PlayerScreenContent(
                             Text("A−")
                         }
                         TextButton(onClick = { subtitleSizeSp = 18 }) {
-                            Text("Reset")
+                            Text(tr("Reset", languageCode))
                         }
                         TextButton(onClick = { subtitleSizeSp = (subtitleSizeSp + 2).coerceAtMost(32) }) {
                             Text("A+")
@@ -1105,7 +1105,7 @@ private fun PlayerScreenContent(
                             Text("−250 ms")
                         }
                         TextButton(onClick = { subtitleDelayMs = 0 }) {
-                            Text("Reset")
+                            Text(tr("Reset", languageCode))
                         }
                         TextButton(onClick = { subtitleDelayMs = (subtitleDelayMs + 250).coerceAtMost(10_000) }) {
                             Text("+250 ms")
@@ -1167,7 +1167,7 @@ private fun PlayerScreenContent(
                                     )
                                 }
                                 if (index == currentMediaIndex) {
-                                    Text("NOW", color = Color(0xFFC7F36B), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                    Text(tr("NOW", languageCode), color = Color(0xFFC7F36B), fontSize = 10.sp, fontWeight = FontWeight.Bold)
                                 }
                             }
                             Column {
@@ -1181,7 +1181,7 @@ private fun PlayerScreenContent(
                                         onQueueChanged(editableQueue, player.currentMediaItem?.localConfiguration?.uri)
                                     }
                                 ) {
-                                    Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Move up", tint = Color.White)
+                                    Icon(Icons.Default.KeyboardArrowUp, contentDescription = tr("Move up", languageCode), tint = Color.White)
                                 }
                                 IconButton(
                                     enabled = index < editableQueue.lastIndex,
@@ -1193,7 +1193,7 @@ private fun PlayerScreenContent(
                                         onQueueChanged(editableQueue, player.currentMediaItem?.localConfiguration?.uri)
                                     }
                                 ) {
-                                    Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Move down", tint = Color.White)
+                                    Icon(Icons.Default.KeyboardArrowDown, contentDescription = tr("Move down", languageCode), tint = Color.White)
                                 }
                             }
                             IconButton(
@@ -1203,7 +1203,7 @@ private fun PlayerScreenContent(
                                     onQueueChanged(editableQueue, player.currentMediaItem?.localConfiguration?.uri)
                                 }
                             ) {
-                                Icon(Icons.Default.Delete, contentDescription = "Remove from queue", tint = Color(0xFFE58C83))
+                                Icon(Icons.Default.Delete, contentDescription = tr("Remove from queue", languageCode), tint = Color(0xFFE58C83))
                             }
                         }
                     }
@@ -1217,7 +1217,7 @@ private fun PlayerScreenContent(
                                 player.shuffleModeEnabled = shuffleEnabled
                             }
                         ) {
-                            Text(if (shuffleEnabled) "Shuffle: on" else "Shuffle: off")
+                            Text(tr(if (shuffleEnabled) "Shuffle: on" else "Shuffle: off", languageCode))
                         }
                         TextButton(
                             onClick = {
@@ -1231,9 +1231,9 @@ private fun PlayerScreenContent(
                         ) {
                             Text(
                                 when (repeatMode) {
-                                    Player.REPEAT_MODE_ALL -> "Repeat: all"
-                                    Player.REPEAT_MODE_ONE -> "Repeat: one"
-                                    else -> "Repeat: off"
+                                    Player.REPEAT_MODE_ALL -> tr("Repeat: all", languageCode)
+                                    Player.REPEAT_MODE_ONE -> tr("Repeat: one", languageCode)
+                                    else -> tr("Repeat: off", languageCode)
                                 }
                             )
                         }
@@ -1338,7 +1338,7 @@ private fun TrackSelectionDialog(
                     audioGroups.forEach { group ->
                         for (index in 0 until group.length) {
                             val format = group.getTrackFormat(index)
-                            val label = trackLabel(format.label, format.language, "Audio", index)
+                            val label = trackLabel(format.label, format.language, "Audio", index, languageCode)
                             TrackOption(
                                 label = label,
                                 selected = group.isTrackSelected(index),
@@ -1362,7 +1362,7 @@ private fun TrackSelectionDialog(
                     subtitleGroups.forEach { group ->
                         for (index in 0 until group.length) {
                             val format = group.getTrackFormat(index)
-                            val label = trackLabel(format.label, format.language, "Subtitle", index)
+                            val label = trackLabel(format.label, format.language, "Subtitle", index, languageCode)
                             TrackOption(
                                 label = label,
                                 selected = group.isTrackSelected(index),
@@ -1419,11 +1419,12 @@ private fun trackLabel(
     label: String?,
     language: String?,
     kind: String,
-    index: Int
+    index: Int,
+    languageCode: String
 ): String {
     val primary = label?.takeIf { it.isNotBlank() }
         ?: language?.takeIf { it.isNotBlank() && it != "und" }?.uppercase()
-        ?: (kind + " " + (index + 1))
+        ?: (tr(kind, languageCode) + " " + (index + 1))
     return primary
 }
 
