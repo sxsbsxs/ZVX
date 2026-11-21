@@ -94,6 +94,7 @@ import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.AspectRatioFrameLayout
+import androidx.media3.ui.CaptionStyleCompat
 import androidx.media3.ui.PlayerView
 import com.zvx.player.data.PlaybackProgressStore
 import com.zvx.player.data.MediaEntry
@@ -189,6 +190,8 @@ private fun PlayerScreenContent(
     var optionsDialogVisible by remember(videoUri) { mutableStateOf(false) }
     var aspectModeIndex by remember(videoUri) { mutableIntStateOf(0) }
     var sleepTimerMinutes by remember(videoUri) { mutableIntStateOf(0) }
+    var subtitleSizeSp by remember(videoUri) { mutableIntStateOf(18) }
+    var subtitleBackgroundEnabled by remember(videoUri) { mutableStateOf(true) }
     var shuffleEnabled by remember(player) { mutableStateOf(player.shuffleModeEnabled) }
     var repeatMode by remember(player) { mutableIntStateOf(player.repeatMode) }
     var currentMediaIndex by remember(player) { mutableIntStateOf(player.currentMediaItemIndex) }
@@ -467,6 +470,24 @@ private fun PlayerScreenContent(
                     1 -> AspectRatioFrameLayout.RESIZE_MODE_FILL
                     2 -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM
                     else -> AspectRatioFrameLayout.RESIZE_MODE_FIT
+                }
+                view.subtitleView?.apply {
+                    setFixedTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, subtitleSizeSp.toFloat())
+                    val subtitleBackground = if (subtitleBackgroundEnabled) {
+                        android.graphics.Color.argb(180, 0, 0, 0)
+                    } else {
+                        android.graphics.Color.TRANSPARENT
+                    }
+                    setStyle(
+                        CaptionStyleCompat(
+                            android.graphics.Color.WHITE,
+                            subtitleBackground,
+                            android.graphics.Color.TRANSPARENT,
+                            CaptionStyleCompat.EDGE_TYPE_OUTLINE,
+                            android.graphics.Color.BLACK,
+                            android.graphics.Typeface.DEFAULT
+                        )
+                    )
                 }
             }
         )
@@ -923,6 +944,28 @@ private fun PlayerScreenContent(
                         ) {
                             Text("Cancel sleep timer")
                         }
+                    }
+                    Text("SUBTITLE STYLE", color = Color(0xFF7F8A78), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text("Text size · $subtitleSizeSp sp", color = Color.White.copy(alpha = 0.76f), fontSize = 12.sp)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        TextButton(onClick = { subtitleSizeSp = (subtitleSizeSp - 2).coerceAtLeast(14) }) {
+                            Text("A−")
+                        }
+                        TextButton(onClick = { subtitleSizeSp = 18 }) {
+                            Text("Reset")
+                        }
+                        TextButton(onClick = { subtitleSizeSp = (subtitleSizeSp + 2).coerceAtMost(32) }) {
+                            Text("A+")
+                        }
+                    }
+                    TextButton(
+                        onClick = { subtitleBackgroundEnabled = !subtitleBackgroundEnabled },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(if (subtitleBackgroundEnabled) "Subtitle background: on" else "Subtitle background: off")
                     }
                 }
             },
