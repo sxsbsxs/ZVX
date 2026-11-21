@@ -54,7 +54,7 @@ class PlaybackService : MediaSessionService() {
         }
         val loadControl = DefaultLoadControl.Builder()
             .setBufferDurationsMsForStreaming(
-                25_000,
+                50_000,
                 90_000,
                 2_500,
                 5_000
