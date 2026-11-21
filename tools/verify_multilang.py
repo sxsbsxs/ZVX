@@ -47,6 +47,7 @@ def main():
         "Video player supports immersive landscape mode": "SCREEN_ORIENTATION_LANDSCAPE" in kotlin and "WindowInsetsCompat.Type.systemBars()" in kotlin and "BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE" in kotlin,
         "Library hands a same-type playlist to the player": "onPlayMedia: (String, Boolean, List<MediaEntry>) -> Unit" in (ROOT / "app/src/main/java/com/zvx/player/ui/HomeScreen.kt").read_text() and "setMediaItems(playlist, selectedIndex, startPosition)" in kotlin,
         "Player supports queue browsing, previous/next, shuffle and repeat": "Playback queue" in kotlin and "seekToPreviousMediaItem" in kotlin and "seekToNextMediaItem" in kotlin and "shuffleModeEnabled" in kotlin and "REPEAT_MODE_ALL" in kotlin,
+        "Player exposes display sizing and sleep timer options": "RESIZE_MODE_FILL" in kotlin and "RESIZE_MODE_ZOOM" in kotlin and "sleepTimerMinutes" in kotlin and "Sleep timer finished" in kotlin,
     }
     for label, passed in checks.items():
         print(f"[{'OK' if passed else 'FAIL'}] {label}")

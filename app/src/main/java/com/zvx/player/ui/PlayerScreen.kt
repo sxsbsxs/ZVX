@@ -175,6 +175,9 @@ private fun PlayerScreenContent(
     var speedIndex by remember(videoUri) { mutableStateOf(1) }
     var trackDialogVisible by remember(videoUri) { mutableStateOf(false) }
     var queueDialogVisible by remember(videoUri) { mutableStateOf(false) }
+    var optionsDialogVisible by remember(videoUri) { mutableStateOf(false) }
+    var aspectModeIndex by remember(videoUri) { mutableIntStateOf(0) }
+    var sleepTimerMinutes by remember(videoUri) { mutableIntStateOf(0) }
     var shuffleEnabled by remember(player) { mutableStateOf(player.shuffleModeEnabled) }
     var repeatMode by remember(player) { mutableIntStateOf(player.repeatMode) }
     var currentMediaIndex by remember(player) { mutableIntStateOf(player.currentMediaItemIndex) }
@@ -183,6 +186,7 @@ private fun PlayerScreenContent(
     var seekFeedback by remember(videoUri) { mutableStateOf<String?>(null) }
     var availableTracks by remember(player) { mutableStateOf(player.currentTracks) }
     val speeds = listOf(0.75f, 1f, 1.25f, 1.5f, 2f)
+    val aspectModeLabels = listOf("Fit", "Fill", "Crop")
     val title = currentTitle
     val leavePlayer = {
         if (!isAudio) player.pause()
@@ -378,6 +382,19 @@ private fun PlayerScreenContent(
         }
     }
 
+    LaunchedEffect(sleepTimerMinutes) {
+        val selectedMinutes = sleepTimerMinutes
+        if (selectedMinutes > 0) {
+            delay(selectedMinutes.toLong() * 60_000L)
+            if (sleepTimerMinutes == selectedMinutes) {
+                player.pause()
+                sleepTimerMinutes = 0
+                controlsVisible = true
+                seekFeedback = "Sleep timer finished"
+            }
+        }
+    }
+
     Box(modifier = modifier.fillMaxSize().background(Color.Black)) {
         AndroidView(
             modifier = Modifier.fillMaxSize().pointerInput(player) {
@@ -409,6 +426,11 @@ private fun PlayerScreenContent(
             },
             update = { view ->
                 if (view.player !== player) view.player = player
+                view.resizeMode = when (aspectModeIndex) {
+                    1 -> AspectRatioFrameLayout.RESIZE_MODE_FILL
+                    2 -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                    else -> AspectRatioFrameLayout.RESIZE_MODE_FIT
+                }
             }
         )
 
@@ -601,6 +623,9 @@ private fun PlayerScreenContent(
                     ) {
                         Text(speeds[speedIndex].toString() + "×", color = Color.White, fontWeight = FontWeight.Bold)
                     }
+                    TextButton(onClick = { optionsDialogVisible = true }) {
+                        Text("Options", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
                 }
 
                 Row(
@@ -744,6 +769,66 @@ private fun PlayerScreenContent(
                 }
             }
         }
+    }
+
+    if (optionsDialogVisible) {
+        AlertDialog(
+            onDismissRequest = { optionsDialogVisible = false },
+            title = { Text("Playback options", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    if (!isAudio) {
+                        Text("VIDEO SIZE", color = Color(0xFF7F8A78), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            aspectModeLabels.forEachIndexed { index, label ->
+                                TextButton(onClick = { aspectModeIndex = index }) {
+                                    Text(
+                                        label,
+                                        color = if (aspectModeIndex == index) Color(0xFFC7F36B) else Color.White
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    Text("SLEEP TIMER", color = Color(0xFF7F8A78), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        if (sleepTimerMinutes > 0) "Playback will pause in $sleepTimerMinutes minutes."
+                        else "Pause playback automatically after a set time.",
+                        color = Color.White.copy(alpha = 0.72f),
+                        fontSize = 12.sp
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        listOf(15, 30, 45, 60).forEach { minutes ->
+                            TextButton(
+                                onClick = {
+                                    sleepTimerMinutes = minutes
+                                    optionsDialogVisible = false
+                                }
+                            ) {
+                                Text("${minutes}m")
+                            }
+                        }
+                    }
+                    if (sleepTimerMinutes > 0) {
+                        TextButton(
+                            onClick = { sleepTimerMinutes = 0 },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Cancel sleep timer")
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { optionsDialogVisible = false }) { Text("Done") }
+            }
+        )
     }
 
     if (queueDialogVisible) {
