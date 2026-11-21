@@ -32,6 +32,9 @@ class MultiLanguageLayoutTest(unittest.TestCase):
         self.assertIn("MediaSession.Builder", service)
         self.assertIn("MediaController.Builder", kotlin)
         self.assertIn("SessionToken", kotlin)
+        self.assertIn("enterPictureInPictureMode", kotlin)
+        self.assertIn("PictureInPictureParams.Builder", kotlin)
+        self.assertIn('android:supportsPictureInPicture="true"', manifest)
         self.assertIn("foregroundServiceType=\"mediaPlayback\"", manifest)
 
 

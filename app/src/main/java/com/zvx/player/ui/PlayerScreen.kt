@@ -7,6 +7,9 @@ import android.content.ContextWrapper
 import android.content.Intent
 import android.media.AudioManager
 import android.net.Uri
+import android.os.Build
+import android.app.PictureInPictureParams
+import android.util.Rational
 import androidx.core.content.ContextCompat
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -470,6 +473,23 @@ private fun PlayerScreenContent(
                             fontSize = 9.sp,
                             letterSpacing = 1.5.sp
                         )
+                    }
+                    if (!isAudio && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        TextButton(
+                            onClick = {
+                                val hostActivity = activity
+                                if (hostActivity != null) {
+                                    controlsVisible = false
+                                    hostActivity.enterPictureInPictureMode(
+                                        PictureInPictureParams.Builder()
+                                            .setAspectRatio(Rational(16, 9))
+                                            .build()
+                                    )
+                                }
+                            }
+                        ) {
+                            Text("PiP", color = Color.White, fontWeight = FontWeight.Bold)
+                        }
                     }
                     IconButton(onClick = { trackDialogVisible = true }) {
                         Icon(

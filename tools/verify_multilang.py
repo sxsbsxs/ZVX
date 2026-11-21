@@ -43,6 +43,7 @@ def main():
         "Player restores app brightness after exit": "originalScreenBrightness" in kotlin and "attributes.screenBrightness = originalScreenBrightness" in kotlin,
         "Media session service is registered": "MediaSessionService" in manifest and "foregroundServiceType=\"mediaPlayback\"" in manifest and "MediaSession.Builder" in service,
         "Player UI connects through MediaController": "MediaController.Builder" in kotlin and "SessionToken" in kotlin and "releaseFuture(controllerFuture)" in kotlin,
+        "Video player exposes Android PiP": "enterPictureInPictureMode" in kotlin and "PictureInPictureParams.Builder" in kotlin and 'android:supportsPictureInPicture="true"' in manifest,
     }
     for label, passed in checks.items():
         print(f"[{'OK' if passed else 'FAIL'}] {label}")
