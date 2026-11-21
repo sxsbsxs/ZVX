@@ -2,6 +2,10 @@ package com.zvx.player.ui
 
 object ZvxStrings {
     private val zh = mapOf(
+        "Audio and subtitles" to "音轨与字幕",
+        "Playback speed" to "播放速度",
+        "Folder" to "文件夹",
+        "More actions" to "更多操作",
         "AUDIO TONE" to "音频音色",
         "Flat" to "原声",
         "Warm" to "温暖",
@@ -129,6 +133,10 @@ object ZvxStrings {
         "Repeat: all" to "循环：列表", "Repeat: one" to "循环：单曲", "Repeat: off" to "循环：关闭"
     )
     private val ja = mapOf(
+        "Audio and subtitles" to "音声と字幕",
+        "Playback speed" to "再生速度",
+        "Folder" to "フォルダー",
+        "More actions" to "その他",
         "AUDIO TONE" to "音質",
         "Flat" to "フラット",
         "Warm" to "ウォーム",

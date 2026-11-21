@@ -36,6 +36,7 @@ import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Movie
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.Refresh
@@ -50,6 +51,8 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -137,6 +140,8 @@ fun HomeScreen(
     var showClearHistoryDialog by remember { mutableStateOf(false) }
     var showClearFavoritesDialog by remember { mutableStateOf(false) }
     var showStreamDialog by remember { mutableStateOf(false) }
+    var showMoreMenu by remember { mutableStateOf(false) }
+    var showFolderDialog by remember { mutableStateOf(false) }
     var importPlaylistUri by remember { mutableStateOf<Uri?>(null) }
     var playlistImportError by remember { mutableStateOf<String?>(null) }
     var reloadToken by remember { mutableIntStateOf(0) }
@@ -298,35 +303,40 @@ fun HomeScreen(
         } else {
         Column(modifier = Modifier.fillMaxSize()) {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 BrandMark()
-                Spacer(Modifier.size(11.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("ZVX", color = ZvxText, fontSize = 20.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
-                    Text(tr("YOUR MEDIA", languageCode), color = ZvxMuted, fontSize = 9.sp, letterSpacing = 1.7.sp)
-                }
-                IconButton(onClick = {
-                    access = MediaPermission.current(context)
-                    reloadToken++
-                }) {
-                    Icon(Icons.Default.Refresh, contentDescription = tr("Refresh library", languageCode), tint = ZvxMuted)
-                }
+                Spacer(Modifier.width(10.dp))
+                Text("ZVX", color = ZvxText, fontSize = 21.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.3.sp)
+                Spacer(Modifier.weight(1f))
                 IconButton(onClick = onChooseFile) {
                     Icon(Icons.Default.FolderOpen, contentDescription = tr("Open file", languageCode), tint = ZvxText)
                 }
-                IconButton(
-                    onClick = {
-                        playlistLauncher.launch(
-                            arrayOf("audio/x-mpegurl", "application/vnd.apple.mpegurl", "text/plain", "application/octet-stream")
+                Box {
+                    IconButton(onClick = { showMoreMenu = true }) {
+                        Icon(Icons.Default.MoreVert, contentDescription = tr("More actions", languageCode), tint = ZvxMuted)
+                    }
+                    DropdownMenu(expanded = showMoreMenu, onDismissRequest = { showMoreMenu = false }) {
+                        DropdownMenuItem(
+                            text = { Text(tr("Refresh library", languageCode)) },
+                            leadingIcon = { Icon(Icons.Default.Refresh, contentDescription = null) },
+                            onClick = { showMoreMenu = false; access = MediaPermission.current(context); reloadToken++ }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(tr("Import M3U playlist", languageCode)) },
+                            leadingIcon = { Icon(Icons.Default.PlaylistAdd, contentDescription = null) },
+                            onClick = {
+                                showMoreMenu = false
+                                playlistLauncher.launch(arrayOf("audio/x-mpegurl", "application/vnd.apple.mpegurl", "text/plain", "application/octet-stream"))
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(tr("Play from URL", languageCode)) },
+                            leadingIcon = { Icon(Icons.Default.Link, contentDescription = null) },
+                            onClick = { showMoreMenu = false; showStreamDialog = true }
                         )
                     }
-                ) {
-                    Icon(Icons.Default.PlaylistAdd, contentDescription = tr("Import M3U playlist", languageCode), tint = ZvxAccent)
-                }
-                IconButton(onClick = { showStreamDialog = true }) {
-                    Icon(Icons.Default.Link, contentDescription = tr("Play from URL", languageCode), tint = ZvxAccent)
                 }
                 IconButton(onClick = { showSettingsDialog = true }) {
                     Icon(Icons.Default.Settings, contentDescription = tr("Settings", languageCode), tint = ZvxText)
@@ -334,10 +344,10 @@ fun HomeScreen(
             }
 
             Column(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 22.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Text(tr("Your library", languageCode), color = ZvxText, fontSize = 30.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.8).sp)
+                Text(tr("Your library", languageCode), color = ZvxText, fontSize = 24.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.4).sp)
                 Text(
                     if (!access.hasAny) {
                         tr("Give ZVX access to build your local collection.", languageCode)
@@ -352,9 +362,8 @@ fun HomeScreen(
                     Surface(
                         onClick = { onResumeQueue(savedQueue) },
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        color = ZvxSurface,
-                        border = BorderStroke(1.dp, ZvxAccent.copy(alpha = 0.35f))
+                        shape = RoundedCornerShape(14.dp),
+                        color = ZvxSurface
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 14.dp, vertical = 11.dp),
@@ -382,12 +391,14 @@ fun HomeScreen(
                     onValueChange = { searchText = it },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(13.dp),
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = ZvxMuted) },
                     placeholder = { Text(tr("Search title, artist or album", languageCode)) },
                     colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = ZvxAccent,
-                        unfocusedBorderColor = ZvxSurfaceRaised,
+                        focusedBorderColor = Color.Transparent,
+                        unfocusedBorderColor = Color.Transparent,
+                        focusedContainerColor = ZvxSurface,
+                        unfocusedContainerColor = ZvxSurface,
                         focusedTextColor = ZvxText,
                         unfocusedTextColor = ZvxText,
                         cursorColor = ZvxAccent
@@ -396,32 +407,23 @@ fun HomeScreen(
 
                 Row(
                     modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     LibraryFilter.entries.forEach { filter ->
-                        FilterChip(
-                            selected = selectedFilter == filter,
+                        Surface(
                             onClick = { selectedFilter = filter },
-                            label = { Text(tr(filter.label, languageCode)) }
-                        )
-                    }
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    FilterChip(
-                        selected = selectedFolder == "All folders",
-                        onClick = { selectedFolder = "All folders" },
-                        label = { Text(tr("All folders", languageCode)) }
-                    )
-                    folders.forEach { folder ->
-                        FilterChip(
-                            selected = selectedFolder == folder,
-                            onClick = { selectedFolder = folder },
-                            label = { Text(folder) }
-                        )
+                            shape = RoundedCornerShape(11.dp),
+                            color = if (selectedFilter == filter) ZvxSurfaceRaised else Color.Transparent
+                        ) {
+                            Text(
+                                tr(filter.label, languageCode),
+                                color = if (selectedFilter == filter) ZvxText else ZvxMuted,
+                                fontSize = 12.sp,
+                                fontWeight = if (selectedFilter == filter) FontWeight.SemiBold else FontWeight.Normal,
+                                modifier = Modifier.padding(horizontal = 13.dp, vertical = 9.dp)
+                            )
+                        }
                     }
                 }
 
@@ -430,13 +432,16 @@ fun HomeScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        visibleMedia.size.toString() + " items",
+                        "${visibleMedia.size} ${tr("items", languageCode)}",
                         color = ZvxMuted,
                         fontSize = 11.sp,
                         modifier = Modifier.weight(1f)
                     )
+                    TextButton(onClick = { showFolderDialog = true }) {
+                        Text(tr(selectedFolder, languageCode), color = ZvxMuted, fontSize = 11.sp)
+                    }
                     TextButton(onClick = { showSortDialog = true }) {
-                        Text(tr("Sort", languageCode) + " · " + tr(selectedSort.label, languageCode), color = ZvxAccent, fontSize = 12.sp)
+                        Text(tr("Sort", languageCode) + " · " + tr(selectedSort.label, languageCode), color = ZvxAccent, fontSize = 11.sp)
                     }
                 }
             }
@@ -469,7 +474,7 @@ fun HomeScreen(
                 LazyColumn(
                     modifier = Modifier.weight(1f),
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                        start = 20.dp, end = 20.dp, top = 8.dp, bottom = 28.dp
+                        start = 22.dp, end = 22.dp, top = 4.dp, bottom = 28.dp
                     ),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
@@ -580,6 +585,33 @@ fun HomeScreen(
                     showSettingsDialog = !showFavoritesScreen
                 }) { Text(tr("Cancel", languageCode)) }
             },
+            containerColor = ZvxSurface,
+            titleContentColor = ZvxText,
+            textContentColor = ZvxMuted
+        )
+    }
+
+    if (showFolderDialog) {
+        AlertDialog(
+            onDismissRequest = { showFolderDialog = false },
+            title = { Text(tr("Folder", languageCode), fontWeight = FontWeight.SemiBold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    (listOf("All folders") + folders).forEach { folder ->
+                        TextButton(
+                            onClick = { selectedFolder = folder; showFolderDialog = false },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                tr(folder, languageCode),
+                                color = if (selectedFolder == folder) ZvxAccent else ZvxText,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { showFolderDialog = false }) { Text(tr("Done", languageCode)) } },
             containerColor = ZvxSurface,
             titleContentColor = ZvxText,
             textContentColor = ZvxMuted
@@ -937,31 +969,36 @@ private fun MediaRow(
     Surface(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        color = ZvxSurface
+        shape = RoundedCornerShape(0.dp),
+        color = Color.Transparent
     ) {
-        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            MediaThumbnail(entry = entry, modifier = Modifier.size(62.dp))
-            Spacer(Modifier.width(13.dp))
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(entry.title, color = ZvxText, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(entry.subtitleLine(), color = ZvxMuted, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(
-                    entry.folderName + "  ·  " + formatDuration(entry.durationMs) + "  ·  " + formatBytes(entry.sizeBytes, languageCode),
-                    color = ZvxMuted.copy(alpha = 0.72f),
-                    fontSize = 10.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+        Column {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                MediaThumbnail(entry = entry, modifier = Modifier.size(56.dp))
+                Spacer(Modifier.width(13.dp))
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text(entry.title, color = ZvxText, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(entry.subtitleLine(), color = ZvxMuted, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        entry.folderName + " · " + formatDuration(entry.durationMs),
+                        color = ZvxMuted.copy(alpha = 0.78f),
+                        fontSize = 10.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                IconButton(onClick = onToggleFavorite, modifier = Modifier.size(38.dp)) {
+                    Icon(
+                        imageVector = if (favorite) Icons.Default.Star else Icons.Default.StarBorder,
+                        contentDescription = tr(if (favorite) "Remove from favorites" else "Add to favorites", languageCode),
+                        tint = if (favorite) ZvxAccent else ZvxMuted
+                    )
+                }
             }
-            IconButton(onClick = onToggleFavorite) {
-                Icon(
-                    imageVector = if (favorite) Icons.Default.Star else Icons.Default.StarBorder,
-                    contentDescription = tr(if (favorite) "Remove from favorites" else "Add to favorites", languageCode),
-                    tint = if (favorite) ZvxAccent else ZvxMuted
-                )
-            }
-            Icon(Icons.Default.PlayArrow, contentDescription = tr("Play", languageCode), tint = ZvxAccent, modifier = Modifier.padding(start = 4.dp).size(24.dp))
+            Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(ZvxSurfaceRaised.copy(alpha = 0.72f)))
         }
     }
 }
@@ -987,13 +1024,8 @@ private fun MediaThumbnail(entry: MediaEntry, modifier: Modifier = Modifier) {
 
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(14.dp))
-            .background(
-                Brush.linearGradient(
-                    if (entry.kind == MediaKind.AUDIO) listOf(Color(0xFF34304B), Color(0xFF202331))
-                    else listOf(Color(0xFF34402A), Color(0xFF202921))
-                )
-            ),
+            .clip(RoundedCornerShape(10.dp))
+            .background(ZvxSurfaceRaised),
         contentAlignment = Alignment.Center
     ) {
         val loaded = bitmap

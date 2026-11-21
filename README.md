@@ -31,7 +31,8 @@ A clean, modern Android media player with a modular multi-language foundation.
 - Picture-in-picture mode for video on Android 8.0+.
 - Switch between supported embedded audio tracks and subtitle tracks.
 - Disable embedded subtitles or load an external SRT, VTT, TTML, SSA or ASS subtitle file; adjust subtitle text size and background visibility.
-- Original dark ZVX interface and GitHub Actions debug APK build.
+- Refined charcoal interface with compact overflow actions, simplified library rows and uncluttered playback controls.
+- Original ZVX visual identity and GitHub Actions debug APK build.
 
 ## Language responsibilities
 

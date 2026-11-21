@@ -48,7 +48,10 @@ import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Slider
@@ -103,6 +106,8 @@ import com.zvx.player.data.MediaEntry
 import com.zvx.player.platform.MediaMetadataProbe
 import com.zvx.player.platform.NativeAudioProcessor
 import com.zvx.player.platform.NativeMediaBridge
+import com.zvx.player.ui.theme.ZvxAccent
+import com.zvx.player.ui.theme.ZvxMuted
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -201,6 +206,7 @@ private fun PlayerScreenContent(
     var speedIndex by remember(videoUri) { mutableIntStateOf(storedPreferences.speedIndex) }
     var trackDialogVisible by remember(videoUri) { mutableStateOf(false) }
     var queueDialogVisible by remember(videoUri) { mutableStateOf(false) }
+    var showPlayerMenu by remember(videoUri) { mutableStateOf(false) }
     var editableQueue by remember(videoUri, queue) { mutableStateOf(queue.toList()) }
     var optionsDialogVisible by remember(videoUri) { mutableStateOf(false) }
     var aspectModeIndex by remember(videoUri) { mutableIntStateOf(storedPreferences.aspectMode) }
@@ -700,15 +706,15 @@ private fun PlayerScreenContent(
                 val artwork = audioArtwork
                 if (artwork != null) {
                     Surface(
-                        modifier = Modifier.size(248.dp),
-                        shape = RoundedCornerShape(30.dp),
+                        modifier = Modifier.size(232.dp),
+                        shape = RoundedCornerShape(22.dp),
                         color = Color(0xFF252B34),
                         shadowElevation = 18.dp
                     ) {
                         Image(
                             bitmap = artwork,
                             contentDescription = tr("Album artwork", languageCode),
-                            modifier = Modifier.fillMaxSize().padding(5.dp).clip(RoundedCornerShape(26.dp)),
+                            modifier = Modifier.fillMaxSize().padding(4.dp).clip(RoundedCornerShape(19.dp)),
                             contentScale = ContentScale.Crop
                         )
                     }
@@ -716,13 +722,13 @@ private fun PlayerScreenContent(
                     Surface(
                         modifier = Modifier.size(232.dp),
                         color = Color(0xFF252B34),
-                        shape = RoundedCornerShape(28.dp)
+                        shape = RoundedCornerShape(22.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
                                 imageVector = Icons.Default.MusicNote,
                                 contentDescription = null,
-                                tint = Color(0xFFC7F36B),
+                                tint = ZvxAccent,
                                 modifier = Modifier.size(88.dp)
                             )
                         }
@@ -752,24 +758,13 @@ private fun PlayerScreenContent(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-                Text(
-                    text = tr("Audio player", languageCode).uppercase(),
-                    color = Color.White.copy(alpha = 0.48f),
-                    fontSize = 9.sp,
-                    letterSpacing = 1.8.sp
-                )
-                Text(
-                    text = tr("NOW PLAYING", languageCode),
-                    color = Color.White.copy(alpha = 0.58f),
-                    fontSize = 10.sp,
-                    letterSpacing = 2.sp
-                )
-                Text(
-                    text = "${tr("TRACK", languageCode)} ${currentMediaIndex + 1} / ${queueSize.coerceAtLeast(1)}",
-                    color = Color.White.copy(alpha = 0.42f),
-                    fontSize = 9.sp,
-                    letterSpacing = 1.4.sp
-                )
+                if (queueSize > 1) {
+                    Text(
+                        "${currentMediaIndex + 1} / $queueSize",
+                        color = Color.White.copy(alpha = 0.42f),
+                        fontSize = 10.sp
+                    )
+                }
             }
         }
 
@@ -780,10 +775,10 @@ private fun PlayerScreenContent(
                     .background(
                         Brush.verticalGradient(
                             colorStops = arrayOf(
-                                0f to Color.Black.copy(alpha = 0.78f),
-                                0.30f to Color.Transparent,
-                                0.62f to Color.Transparent,
-                                1f to Color.Black.copy(alpha = 0.88f)
+                                0f to Color.Black.copy(alpha = 0.58f),
+                                0.28f to Color.Transparent,
+                                0.64f to Color.Transparent,
+                                1f to Color.Black.copy(alpha = 0.72f)
                             )
                         )
                     )
@@ -794,85 +789,79 @@ private fun PlayerScreenContent(
                     IconButton(onClick = leavePlayer) {
                         Icon(Icons.Default.ArrowBack, contentDescription = tr("Back", languageCode), tint = Color.White)
                     }
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            title,
-                            color = Color.White,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text(
-                            "ZVX PLAYER",
-                            color = Color.White.copy(alpha = 0.58f),
-                            fontSize = 9.sp,
-                            letterSpacing = 1.5.sp
-                        )
-                    }
-                    if (!isAudio) {
-                        TextButton(
-                            onClick = {
-                                val hostActivity = activity
-                                if (hostActivity != null) {
-                                    immersiveLandscape = !immersiveLandscape
-                                    if (immersiveLandscape) {
-                                        hostActivity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-                                        WindowInsetsControllerCompat(hostActivity.window, hostActivity.window.decorView).apply {
-                                            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-                                            hide(WindowInsetsCompat.Type.systemBars())
+                    Text(
+                        title,
+                        modifier = Modifier.weight(1f),
+                        color = Color.White,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Box {
+                        IconButton(onClick = { showPlayerMenu = true }) {
+                            Icon(Icons.Default.MoreVert, contentDescription = tr("More actions", languageCode), tint = Color.White)
+                        }
+                        DropdownMenu(expanded = showPlayerMenu, onDismissRequest = { showPlayerMenu = false }) {
+                            if (!isAudio) {
+                                DropdownMenuItem(
+                                    text = { Text(tr(if (immersiveLandscape) "Exit" else "Full", languageCode)) },
+                                    onClick = {
+                                        showPlayerMenu = false
+                                        val hostActivity = activity
+                                        if (hostActivity != null) {
+                                            immersiveLandscape = !immersiveLandscape
+                                            if (immersiveLandscape) {
+                                                hostActivity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                                                WindowInsetsControllerCompat(hostActivity.window, hostActivity.window.decorView).apply {
+                                                    systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                                                    hide(WindowInsetsCompat.Type.systemBars())
+                                                }
+                                                controlsVisible = false
+                                            } else {
+                                                hostActivity.requestedOrientation = originalRequestedOrientation
+                                                WindowInsetsControllerCompat(hostActivity.window, hostActivity.window.decorView).show(WindowInsetsCompat.Type.systemBars())
+                                                controlsVisible = true
+                                            }
                                         }
-                                        controlsVisible = false
-                                    } else {
-                                        hostActivity.requestedOrientation = originalRequestedOrientation
-                                        WindowInsetsControllerCompat(hostActivity.window, hostActivity.window.decorView).show(WindowInsetsCompat.Type.systemBars())
-                                        controlsVisible = true
                                     }
+                                )
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                    DropdownMenuItem(
+                                        text = { Text(tr("PiP", languageCode)) },
+                                        onClick = {
+                                            showPlayerMenu = false
+                                            activity?.enterPictureInPictureMode(
+                                                PictureInPictureParams.Builder().setAspectRatio(Rational(16, 9)).build()
+                                            )
+                                            controlsVisible = false
+                                        }
+                                    )
                                 }
                             }
-                        ) {
-                            Text(tr(if (immersiveLandscape) "Exit" else "Full", languageCode), color = Color.White, fontWeight = FontWeight.Bold)
-                        }
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                            TextButton(
+                            if (queueSize > 1) {
+                                DropdownMenuItem(
+                                    text = { Text(tr("Queue", languageCode)) },
+                                    onClick = { showPlayerMenu = false; queueDialogVisible = true }
+                                )
+                            }
+                            DropdownMenuItem(
+                                text = { Text(tr("Audio and subtitles", languageCode)) },
+                                onClick = { showPlayerMenu = false; trackDialogVisible = true }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("${tr("Playback speed", languageCode)} · ${speeds[speedIndex]}×") },
                                 onClick = {
-                                    val hostActivity = activity
-                                    if (hostActivity != null) {
-                                        controlsVisible = false
-                                        hostActivity.enterPictureInPictureMode(
-                                            PictureInPictureParams.Builder()
-                                                .setAspectRatio(Rational(16, 9))
-                                                .build()
-                                        )
-                                    }
+                                    showPlayerMenu = false
+                                    speedIndex = (speedIndex + 1) % speeds.size
+                                    player.playbackParameters = PlaybackParameters(speeds[speedIndex])
                                 }
-                            ) {
-                                Text(tr("PiP", languageCode), color = Color.White, fontWeight = FontWeight.Bold)
-                            }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(tr("Playback options", languageCode)) },
+                                onClick = { showPlayerMenu = false; optionsDialogVisible = true }
+                            )
                         }
-                    }
-                    if (queueSize > 1) {
-                        TextButton(onClick = { queueDialogVisible = true }) {
-                            Text(tr("Queue", languageCode), color = Color.White, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                    IconButton(onClick = { trackDialogVisible = true }) {
-                        Icon(
-                            Icons.Default.Tune,
-                            contentDescription = tr("Audio and subtitle tracks", languageCode),
-                            tint = Color.White
-                        )
-                    }
-                    TextButton(
-                        onClick = {
-                            speedIndex = (speedIndex + 1) % speeds.size
-                            player.playbackParameters = PlaybackParameters(speeds[speedIndex])
-                        }
-                    ) {
-                        Text(speeds[speedIndex].toString() + "×", color = Color.White, fontWeight = FontWeight.Bold)
-                    }
-                    TextButton(onClick = { optionsDialogVisible = true }) {
-                        Text(tr("Options", languageCode), color = Color.White, fontWeight = FontWeight.Bold)
                     }
                 }
 
@@ -881,7 +870,7 @@ private fun PlayerScreenContent(
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    if (queueSize > 1) {
+                    if (queueSize > 1 || isAudio) {
                         IconButton(
                             onClick = { player.seekToPreviousMediaItem() },
                             enabled = player.hasPreviousMediaItem(),
@@ -890,28 +879,30 @@ private fun PlayerScreenContent(
                             Icon(Icons.Default.SkipPrevious, contentDescription = tr("Previous item", languageCode), tint = Color.White)
                         }
                     }
-                    IconButton(
-                        onClick = {
-                            player.seekTo(
-                                NativeMediaBridge.clampSeekPosition(
-                                    player.currentPosition - 10_000L,
+                    if (!isAudio) {
+                        IconButton(
+                            onClick = {
+                                player.seekTo(
+                                    NativeMediaBridge.clampSeekPosition(
+                                        player.currentPosition - 10_000L,
                                     player.duration.takeIf { it > 0L && it != C.TIME_UNSET } ?: 0L
                                 )
                             )
                         },
-                        modifier = Modifier.size(48.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.Replay10,
-                            contentDescription = tr("Back 10 seconds", languageCode),
-                            tint = Color.White,
-                            modifier = Modifier.size(32.dp)
-                        )
+                            modifier = Modifier.size(48.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Replay10,
+                                contentDescription = tr("Back 10 seconds", languageCode),
+                                tint = Color.White,
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
                     }
-                    Spacer(Modifier.size(28.dp))
+                    Spacer(Modifier.size(20.dp))
                     Surface(
-                        modifier = Modifier.size(68.dp),
-                        shape = RoundedCornerShape(24.dp),
+                        modifier = Modifier.size(64.dp),
+                        shape = RoundedCornerShape(32.dp),
                         color = Color.White.copy(alpha = 0.16f)
                     ) {
                         IconButton(
@@ -932,26 +923,28 @@ private fun PlayerScreenContent(
                             )
                         }
                     }
-                    Spacer(Modifier.size(28.dp))
-                    IconButton(
-                        onClick = {
-                            player.seekTo(
-                                NativeMediaBridge.clampSeekPosition(
-                                    player.currentPosition + 10_000L,
+                    Spacer(Modifier.size(20.dp))
+                    if (!isAudio) {
+                        IconButton(
+                            onClick = {
+                                player.seekTo(
+                                    NativeMediaBridge.clampSeekPosition(
+                                        player.currentPosition + 10_000L,
                                     player.duration.takeIf { it > 0L && it != C.TIME_UNSET } ?: 0L
                                 )
                             )
                         },
-                        modifier = Modifier.size(48.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.Forward10,
-                            contentDescription = tr("Forward 10 seconds", languageCode),
-                            tint = Color.White,
-                            modifier = Modifier.size(32.dp)
-                        )
+                            modifier = Modifier.size(48.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Forward10,
+                                contentDescription = tr("Forward 10 seconds", languageCode),
+                                tint = Color.White,
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
                     }
-                    if (queueSize > 1) {
+                    if (queueSize > 1 || isAudio) {
                         IconButton(
                             onClick = { player.seekToNextMediaItem() },
                             enabled = player.hasNextMediaItem(),
@@ -1026,7 +1019,7 @@ private fun PlayerScreenContent(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     if (!isAudio) {
-                        Text(tr("VIDEO SIZE", languageCode), color = Color(0xFF7F8A78), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text(tr("VIDEO SIZE", languageCode), color = ZvxMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceEvenly
