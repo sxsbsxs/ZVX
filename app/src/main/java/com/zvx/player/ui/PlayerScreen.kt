@@ -90,6 +90,7 @@ import com.zvx.player.data.PlaybackProgressStore
 import com.zvx.player.data.MediaEntry
 import com.zvx.player.platform.NativeMediaBridge
 import kotlinx.coroutines.delay
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 @OptIn(UnstableApi::class)
@@ -442,10 +443,22 @@ private fun PlayerScreenContent(
                     var startVolume = 0
                     var volumeAdjustment = 0f
                     var maxVolume = 1
+                    var gestureMode = 0 // 1 = horizontal seek, 2 = vertical adjustment
+                    var totalDragX = 0f
+                    var totalDragY = 0f
+                    var seekStartPosition = 0L
+                    var seekDuration = 0L
+                    var horizontalSeekDelta = 0L
 
                     detectDragGestures(
                         onDragStart = { offset ->
                             activeSide = if (offset.x < size.width / 2f) 0 else 1
+                            gestureMode = 0
+                            totalDragX = 0f
+                            totalDragY = 0f
+                            seekStartPosition = player.currentPosition
+                            seekDuration = player.duration.takeIf { it > 0L && it != C.TIME_UNSET } ?: 0L
+                            horizontalSeekDelta = 0L
                             if (activeSide == 0) {
                                 brightnessValue = activity?.window?.attributes?.screenBrightness
                                     ?.takeIf { it >= 0f } ?: 0.5f
@@ -456,25 +469,50 @@ private fun PlayerScreenContent(
                             }
                             controlsVisible = false
                         },
-                        onDragEnd = { controlsVisible = true },
+                        onDragEnd = {
+                            if (gestureMode == 1 && seekDuration > 0L) {
+                                player.seekTo(
+                                    NativeMediaBridge.clampSeekPosition(
+                                        seekStartPosition + horizontalSeekDelta,
+                                        seekDuration
+                                    )
+                                )
+                            }
+                            controlsVisible = true
+                        },
                         onDragCancel = { controlsVisible = true }
                     ) { change, dragAmount ->
                         change.consume()
-                        val verticalFraction = -dragAmount.y / size.height.coerceAtLeast(1).toFloat()
-                        if (activeSide == 0) {
-                            val window = activity?.window
-                            if (window != null) {
-                                brightnessValue = (brightnessValue + verticalFraction * 1.35f).coerceIn(0.02f, 1f)
-                                val attributes = window.attributes
-                                attributes.screenBrightness = brightnessValue
-                                window.attributes = attributes
-                                seekFeedback = "Brightness " + (brightnessValue * 100).roundToInt() + "%"
+                        totalDragX += dragAmount.x
+                        totalDragY += dragAmount.y
+                        if (gestureMode == 0 && (abs(totalDragX) > 10f || abs(totalDragY) > 10f)) {
+                            gestureMode = if (abs(totalDragX) > abs(totalDragY)) 1 else 2
+                        }
+
+                        if (gestureMode == 1 && seekDuration > 0L) {
+                            horizontalSeekDelta += (dragAmount.x * 250f).toLong()
+                            val previewPosition = NativeMediaBridge.clampSeekPosition(
+                                seekStartPosition + horizontalSeekDelta,
+                                seekDuration
+                            )
+                            seekFeedback = "Seek to " + formatTime(previewPosition)
+                        } else if (gestureMode == 2) {
+                            val verticalFraction = -dragAmount.y / size.height.coerceAtLeast(1).toFloat()
+                            if (activeSide == 0) {
+                                val window = activity?.window
+                                if (window != null) {
+                                    brightnessValue = (brightnessValue + verticalFraction * 1.35f).coerceIn(0.02f, 1f)
+                                    val attributes = window.attributes
+                                    attributes.screenBrightness = brightnessValue
+                                    window.attributes = attributes
+                                    seekFeedback = "Brightness " + (brightnessValue * 100).roundToInt() + "%"
+                                }
+                            } else {
+                                volumeAdjustment += verticalFraction * maxVolume * 2f
+                                val targetVolume = (startVolume + volumeAdjustment.roundToInt()).coerceIn(0, maxVolume)
+                                audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, targetVolume, 0)
+                                seekFeedback = "Volume " + (targetVolume * 100f / maxVolume).roundToInt() + "%"
                             }
-                        } else {
-                            volumeAdjustment += verticalFraction * maxVolume * 2f
-                            val targetVolume = (startVolume + volumeAdjustment.roundToInt()).coerceIn(0, maxVolume)
-                            audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, targetVolume, 0)
-                            seekFeedback = "Volume " + (targetVolume * 100f / maxVolume).roundToInt() + "%"
                         }
                     }
                 }

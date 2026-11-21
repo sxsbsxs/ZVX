@@ -45,6 +45,8 @@ class MultiLanguageLayoutTest(unittest.TestCase):
         self.assertIn("RESIZE_MODE_ZOOM", kotlin)
         self.assertIn("sleepTimerMinutes", kotlin)
         self.assertIn("Sleep timer finished", kotlin)
+        self.assertIn("horizontalSeekDelta", kotlin)
+        self.assertIn("Seek to ", kotlin)
         home = (verify_multilang.ROOT / "app/src/main/java/com/zvx/player/ui/HomeScreen.kt").read_text()
         self.assertIn("List<MediaEntry>", home)
         self.assertIn("PictureInPictureParams.Builder", kotlin)

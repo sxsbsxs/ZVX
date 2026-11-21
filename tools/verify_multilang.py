@@ -48,6 +48,7 @@ def main():
         "Library hands a same-type playlist to the player": "onPlayMedia: (String, Boolean, List<MediaEntry>) -> Unit" in (ROOT / "app/src/main/java/com/zvx/player/ui/HomeScreen.kt").read_text() and "setMediaItems(playlist, selectedIndex, startPosition)" in kotlin,
         "Player supports queue browsing, previous/next, shuffle and repeat": "Playback queue" in kotlin and "seekToPreviousMediaItem" in kotlin and "seekToNextMediaItem" in kotlin and "shuffleModeEnabled" in kotlin and "REPEAT_MODE_ALL" in kotlin,
         "Player exposes display sizing and sleep timer options": "RESIZE_MODE_FILL" in kotlin and "RESIZE_MODE_ZOOM" in kotlin and "sleepTimerMinutes" in kotlin and "Sleep timer finished" in kotlin,
+        "Player supports horizontal swipe-to-seek": "gestureMode == 1" in kotlin and "horizontalSeekDelta" in kotlin and "Seek to " in kotlin,
     }
     for label, passed in checks.items():
         print(f"[{'OK' if passed else 'FAIL'}] {label}")
