@@ -14,7 +14,8 @@ A clean, modern Android media player with a modular multi-language foundation.
 - Progressive playback for common media containers when a device has a compatible decoder.
 - Play, pause, seek, skip ±10 seconds with buttons or double-tap left/right on the video, and change playback speed (0.75×–2×).
 - On-screen vertical gestures: drag up/down on the left side to adjust video brightness and on the right side to adjust media volume; app brightness is restored when leaving the player.
-- Background audio playback through Android MediaSessionService with media notification controls.
+- Playlist playback from the currently filtered library, with an in-player queue browser, previous / next controls, shuffle and repeat modes.
+- Background audio playback through Android MediaSessionService with media notification controls; playlist navigation is exposed to system media controls.
 - One-tap immersive landscape playback with transient system bars revealed by swipe; restores the previous orientation and system bars when leaving the player.
 - Picture-in-picture mode for video on Android 8.0+.
 - Switch between supported embedded audio tracks and subtitle tracks.

@@ -45,6 +45,8 @@ def main():
         "Player UI connects through MediaController": "MediaController.Builder" in kotlin and "SessionToken" in kotlin and "releaseFuture(controllerFuture)" in kotlin,
         "Video player exposes Android PiP": "enterPictureInPictureMode" in kotlin and "PictureInPictureParams.Builder" in kotlin and 'android:supportsPictureInPicture="true"' in manifest,
         "Video player supports immersive landscape mode": "SCREEN_ORIENTATION_LANDSCAPE" in kotlin and "WindowInsetsCompat.Type.systemBars()" in kotlin and "BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE" in kotlin,
+        "Library hands a same-type playlist to the player": "onPlayMedia: (String, Boolean, List<MediaEntry>) -> Unit" in (ROOT / "app/src/main/java/com/zvx/player/ui/HomeScreen.kt").read_text() and "setMediaItems(playlist, selectedIndex, startPosition)" in kotlin,
+        "Player supports queue browsing, previous/next, shuffle and repeat": "Playback queue" in kotlin and "seekToPreviousMediaItem" in kotlin and "seekToNextMediaItem" in kotlin and "shuffleModeEnabled" in kotlin and "REPEAT_MODE_ALL" in kotlin,
     }
     for label, passed in checks.items():
         print(f"[{'OK' if passed else 'FAIL'}] {label}")

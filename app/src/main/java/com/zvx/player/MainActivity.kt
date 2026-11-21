@@ -13,6 +13,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import com.zvx.player.data.MediaEntry
 import com.zvx.player.ui.HomeScreen
 import com.zvx.player.ui.PlayerScreen
 import com.zvx.player.ui.theme.ZvxTheme
@@ -25,6 +26,7 @@ class MainActivity : ComponentActivity() {
             ZvxTheme {
                 var activeSource by rememberSaveable { mutableStateOf<String?>(null) }
                 var activeIsAudio by rememberSaveable { mutableStateOf(false) }
+                var activeQueue by androidx.compose.runtime.remember { mutableStateOf<List<MediaEntry>>(emptyList()) }
 
                 val filePicker = rememberLauncherForActivityResult(
                     contract = ActivityResultContracts.OpenDocument()
@@ -39,6 +41,7 @@ class MainActivity : ComponentActivity() {
                             // Some document providers grant temporary access only.
                         }
                         activeSource = selectedUri.toString()
+                        activeQueue = emptyList()
                         activeIsAudio = selectedUri.toString().substringBefore('?')
                             .substringAfterLast('.', "")
                             .lowercase() in setOf("mp3", "m4a", "aac", "flac", "wav", "ogg", "opus")
@@ -51,23 +54,27 @@ class MainActivity : ComponentActivity() {
                         onChooseFile = {
                             filePicker.launch(arrayOf("video/*", "audio/*", "application/octet-stream"))
                         },
-                        onPlayMedia = { uri, isAudio ->
+                        onPlayMedia = { uri, isAudio, queue ->
                             activeSource = uri
                             activeIsAudio = isAudio
+                            activeQueue = queue
                         },
                         onOpenStream = { address ->
                             activeSource = address
                             activeIsAudio = false
+                            activeQueue = emptyList()
                         }
                     )
                 } else {
                     PlayerScreen(
                         videoUri = Uri.parse(activeSource),
                         isAudio = activeIsAudio,
+                        queue = activeQueue,
                         modifier = Modifier.fillMaxSize(),
                         onBack = {
                             activeSource = null
                             activeIsAudio = false
+                            activeQueue = emptyList()
                         }
                     )
                 }

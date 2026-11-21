@@ -42,6 +42,8 @@ import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Forward10
 import androidx.compose.material.icons.filled.Replay10
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -55,6 +57,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -84,6 +87,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import com.zvx.player.data.PlaybackProgressStore
+import com.zvx.player.data.MediaEntry
 import com.zvx.player.platform.NativeMediaBridge
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
@@ -94,6 +98,7 @@ fun PlayerScreen(
     videoUri: Uri,
     modifier: Modifier = Modifier,
     isAudio: Boolean = false,
+    queue: List<MediaEntry> = emptyList(),
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
@@ -136,6 +141,7 @@ fun PlayerScreen(
             videoUri = videoUri,
             modifier = modifier,
             isAudio = isAudio,
+            queue = queue,
             onBack = onBack,
             player = activeController
         )
@@ -147,6 +153,7 @@ private fun PlayerScreenContent(
     videoUri: Uri,
     modifier: Modifier,
     isAudio: Boolean,
+    queue: List<MediaEntry>,
     onBack: () -> Unit,
     player: Player
 ) {
@@ -167,10 +174,15 @@ private fun PlayerScreenContent(
     var playbackError by remember(videoUri) { mutableStateOf<String?>(null) }
     var speedIndex by remember(videoUri) { mutableStateOf(1) }
     var trackDialogVisible by remember(videoUri) { mutableStateOf(false) }
+    var queueDialogVisible by remember(videoUri) { mutableStateOf(false) }
+    var shuffleEnabled by remember(player) { mutableStateOf(player.shuffleModeEnabled) }
+    var repeatMode by remember(player) { mutableIntStateOf(player.repeatMode) }
+    var currentMediaIndex by remember(player) { mutableIntStateOf(player.currentMediaItemIndex) }
+    var currentTitle by remember(videoUri) { mutableStateOf(videoUri.lastPathSegment?.substringAfterLast('/')?.take(64) ?: "Now playing") }
     var seekFeedback by remember(videoUri) { mutableStateOf<String?>(null) }
     var availableTracks by remember(player) { mutableStateOf(player.currentTracks) }
     val speeds = listOf(0.75f, 1f, 1.25f, 1.5f, 2f)
-    val title = videoUri.lastPathSegment?.substringAfterLast('/')?.take(64) ?: "Now playing"
+    val title = currentTitle
     val leavePlayer = {
         if (!isAudio) player.pause()
         onBack()
@@ -180,16 +192,32 @@ private fun PlayerScreenContent(
         val currentUri = player.currentMediaItem?.localConfiguration?.uri
         if (currentUri != videoUri) {
             val startPosition = savedPosition.takeIf { it >= 5_000L } ?: C.TIME_UNSET
-            val mediaItem = MediaItem.Builder()
-                .setUri(videoUri)
-                .setMediaMetadata(
-                    MediaMetadata.Builder()
-                        .setTitle(title)
-                        .setArtist("ZVX")
-                        .build()
-                )
-                .build()
-            player.setMediaItem(mediaItem, startPosition)
+            val playlist = queue.map { entry ->
+                MediaItem.Builder()
+                    .setUri(entry.uri)
+                    .setMediaMetadata(
+                        MediaMetadata.Builder()
+                            .setTitle(entry.title)
+                            .setArtist(entry.artist ?: "ZVX")
+                            .build()
+                    )
+                    .build()
+            }
+            val selectedIndex = queue.indexOfFirst { it.uri.toString() == videoUri.toString() }
+            if (playlist.isNotEmpty() && selectedIndex >= 0) {
+                player.setMediaItems(playlist, selectedIndex, startPosition)
+            } else {
+                val mediaItem = MediaItem.Builder()
+                    .setUri(videoUri)
+                    .setMediaMetadata(
+                        MediaMetadata.Builder()
+                            .setTitle(title)
+                            .setArtist("ZVX")
+                            .build()
+                    )
+                    .build()
+                player.setMediaItem(mediaItem, startPosition)
+            }
             player.prepare()
         }
         player.playWhenReady = true
@@ -266,6 +294,13 @@ private fun PlayerScreenContent(
 
             override fun onTracksChanged(tracks: Tracks) {
                 availableTracks = tracks
+            }
+
+            override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                currentMediaIndex = player.currentMediaItemIndex
+                currentTitle = mediaItem?.mediaMetadata?.title?.toString()
+                    ?: mediaItem?.localConfiguration?.uri?.lastPathSegment?.substringAfterLast('/')
+                    ?: "Now playing"
             }
 
             override fun onPlayerError(error: PlaybackException) {
@@ -524,6 +559,36 @@ private fun PlayerScreenContent(
                             }
                         }
                     }
+                    if (player.mediaItemCount > 1) {
+                        TextButton(onClick = { queueDialogVisible = true }) {
+                            Text("Queue", color = Color.White, fontWeight = FontWeight.Bold)
+                        }
+                        TextButton(
+                            onClick = {
+                                shuffleEnabled = !shuffleEnabled
+                                player.shuffleModeEnabled = shuffleEnabled
+                            }
+                        ) {
+                            Text(if (shuffleEnabled) "Shuffle on" else "Shuffle", color = if (shuffleEnabled) Color(0xFFC7F36B) else Color.White)
+                        }
+                        TextButton(
+                            onClick = {
+                                repeatMode = when (repeatMode) {
+                                    Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL
+                                    Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE
+                                    else -> Player.REPEAT_MODE_OFF
+                                }
+                                player.repeatMode = repeatMode
+                            }
+                        ) {
+                            val repeatLabel = when (repeatMode) {
+                                Player.REPEAT_MODE_ALL -> "Repeat all"
+                                Player.REPEAT_MODE_ONE -> "Repeat one"
+                                else -> "Repeat off"
+                            }
+                            Text(repeatLabel, color = if (repeatMode == Player.REPEAT_MODE_OFF) Color.White else Color(0xFFC7F36B))
+                        }
+                    }
                     IconButton(onClick = { trackDialogVisible = true }) {
                         Icon(
                             Icons.Default.Tune,
@@ -546,6 +611,15 @@ private fun PlayerScreenContent(
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    if (player.mediaItemCount > 1) {
+                        IconButton(
+                            onClick = { player.seekToPreviousMediaItem() },
+                            enabled = player.currentMediaItemIndex > 0 || player.repeatMode == Player.REPEAT_MODE_ALL,
+                            modifier = Modifier.size(42.dp)
+                        ) {
+                            Icon(Icons.Default.SkipPrevious, contentDescription = "Previous item", tint = Color.White)
+                        }
+                    }
                     IconButton(
                         onClick = {
                             player.seekTo(
@@ -555,7 +629,7 @@ private fun PlayerScreenContent(
                                 )
                             )
                         },
-                        modifier = Modifier.size(54.dp)
+                        modifier = Modifier.size(48.dp)
                     ) {
                         Icon(
                             Icons.Default.Replay10,
@@ -598,7 +672,7 @@ private fun PlayerScreenContent(
                                 )
                             )
                         },
-                        modifier = Modifier.size(54.dp)
+                        modifier = Modifier.size(48.dp)
                     ) {
                         Icon(
                             Icons.Default.Forward10,
@@ -606,6 +680,15 @@ private fun PlayerScreenContent(
                             tint = Color.White,
                             modifier = Modifier.size(32.dp)
                         )
+                    }
+                    if (player.mediaItemCount > 1) {
+                        IconButton(
+                            onClick = { player.seekToNextMediaItem() },
+                            enabled = player.currentMediaItemIndex < player.mediaItemCount - 1 || player.repeatMode == Player.REPEAT_MODE_ALL,
+                            modifier = Modifier.size(42.dp)
+                        ) {
+                            Icon(Icons.Default.SkipNext, contentDescription = "Next item", tint = Color.White)
+                        }
                     }
                 }
 
@@ -664,6 +747,53 @@ private fun PlayerScreenContent(
                 }
             }
         }
+    }
+
+    if (queueDialogVisible) {
+        AlertDialog(
+            onDismissRequest = { queueDialogVisible = false },
+            title = { Text("Playback queue", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    queue.forEach { entry ->
+                        val index = queue.indexOf(entry)
+                        TextButton(
+                            onClick = {
+                                player.seekTo(index, 0L)
+                                player.play()
+                                queueDialogVisible = false
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    entry.title,
+                                    color = if (index == currentMediaIndex) Color(0xFFC7F36B) else Color.White,
+                                    maxLines = 1
+                                )
+                                Text(
+                                    entry.artist ?: entry.folderName,
+                                    color = Color.White.copy(alpha = 0.56f),
+                                    fontSize = 11.sp,
+                                    maxLines = 1
+                                )
+                            }
+                            if (index == currentMediaIndex) {
+                                Text("NOW", color = Color(0xFFC7F36B), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { queueDialogVisible = false }) { Text("Close") }
+            }
+        )
     }
 
     if (trackDialogVisible) {

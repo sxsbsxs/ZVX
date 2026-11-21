@@ -96,7 +96,7 @@ private enum class LibrarySort(val label: String) {
 fun HomeScreen(
     modifier: Modifier = Modifier,
     onChooseFile: () -> Unit,
-    onPlayMedia: (String, Boolean) -> Unit,
+    onPlayMedia: (String, Boolean, List<MediaEntry>) -> Unit,
     onOpenStream: (String) -> Unit
 ) {
     val context = LocalContext.current
@@ -304,7 +304,8 @@ fun HomeScreen(
                         MediaRow(entry = entry, onClick = {
                             PlaybackHistoryStore.markPlayed(context, entry.uri.toString())
                             recentUris = PlaybackHistoryStore.getRecent(context)
-                            onPlayMedia(entry.uri.toString(), entry.kind == MediaKind.AUDIO)
+                            val queue = visibleMedia.filter { it.kind == entry.kind }
+                            onPlayMedia(entry.uri.toString(), entry.kind == MediaKind.AUDIO, queue)
                         })
                     }
                 }
