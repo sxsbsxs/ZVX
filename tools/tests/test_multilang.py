@@ -118,6 +118,8 @@ class MultiLanguageLayoutTest(unittest.TestCase):
         self.assertIn("RoundedCornerShape(0.dp)", home)
         self.assertIn("DropdownMenuItem", kotlin)
         self.assertIn("showPlayerMenu", kotlin)
+        self.assertNotIn("0xFFC7F36B", kotlin)
+        self.assertNotIn("0xFF7F8A78", kotlin)
         strings = (verify_multilang.ROOT / "app/src/main/java/com/zvx/player/ui/ZvxStrings.kt").read_text()
         self.assertIn(' "媒体库"', strings)
         self.assertIn(' "メディアライブラリ"', strings)

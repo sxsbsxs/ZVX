@@ -980,8 +980,8 @@ private fun PlayerScreenContent(
                         enabled = duration > 0L,
                         modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
                         colors = SliderDefaults.colors(
-                            thumbColor = Color(0xFFC7F36B),
-                            activeTrackColor = Color(0xFFC7F36B),
+                            thumbColor = ZvxAccent,
+                            activeTrackColor = ZvxAccent,
                             inactiveTrackColor = Color.White.copy(alpha = 0.28f)
                         )
                     )
@@ -1028,14 +1028,14 @@ private fun PlayerScreenContent(
                                 TextButton(onClick = { aspectModeIndex = index }) {
                                     Text(
                                         label,
-                                        color = if (aspectModeIndex == index) Color(0xFFC7F36B) else Color.White
+                                        color = if (aspectModeIndex == index) ZvxAccent else Color.White
                                     )
                                 }
                             }
                         }
                     }
                     if (isAudio) {
-                        Text(tr("AUDIO TONE", languageCode), color = Color(0xFF7F8A78), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text(tr("AUDIO TONE", languageCode), color = ZvxMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceEvenly
@@ -1052,7 +1052,7 @@ private fun PlayerScreenContent(
                                 }) {
                                     Text(
                                         tr(label, languageCode),
-                                        color = if (audioToneProfile == profile) Color(0xFFC7F36B) else Color.White,
+                                        color = if (audioToneProfile == profile) ZvxAccent else Color.White,
                                         fontSize = 11.sp
                                     )
                                 }
@@ -1064,7 +1064,7 @@ private fun PlayerScreenContent(
                             fontSize = 10.sp
                         )
                     }
-                    Text(tr("SLEEP TIMER", languageCode), color = Color(0xFF7F8A78), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text(tr("SLEEP TIMER", languageCode), color = ZvxMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     Text(
                         if (sleepTimerMinutes > 0) "Playback will pause in $sleepTimerMinutes minutes."
                         else tr("Pause playback automatically after a set time.", languageCode),
@@ -1094,7 +1094,7 @@ private fun PlayerScreenContent(
                             Text(tr("Cancel sleep timer", languageCode))
                         }
                     }
-                    Text(tr("SUBTITLE STYLE", languageCode), color = Color(0xFF7F8A78), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text(tr("SUBTITLE STYLE", languageCode), color = ZvxMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     Text("${tr("Text size", languageCode)} · $subtitleSizeSp sp", color = Color.White.copy(alpha = 0.76f), fontSize = 12.sp)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -1110,7 +1110,7 @@ private fun PlayerScreenContent(
                             Text("A+")
                         }
                     }
-                    Text(tr("SUBTITLE TIMING", languageCode), color = Color(0xFF7F8A78), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text(tr("SUBTITLE TIMING", languageCode), color = ZvxMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     Text(
                         "${tr("External SRT / WebVTT delay", languageCode)} · ${subtitleDelayMs} ms",
                         color = Color.White.copy(alpha = 0.76f),
@@ -1125,8 +1125,8 @@ private fun PlayerScreenContent(
                         steps = 79,
                         modifier = Modifier.fillMaxWidth(),
                         colors = SliderDefaults.colors(
-                            thumbColor = Color(0xFFC7F36B),
-                            activeTrackColor = Color(0xFFC7F36B),
+                            thumbColor = ZvxAccent,
+                            activeTrackColor = ZvxAccent,
                             inactiveTrackColor = Color.White.copy(alpha = 0.28f)
                         )
                     )
@@ -1189,7 +1189,7 @@ private fun PlayerScreenContent(
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
                                         entry.title,
-                                        color = if (index == currentMediaIndex) Color(0xFFC7F36B) else Color.White,
+                                        color = if (index == currentMediaIndex) ZvxAccent else Color.White,
                                         maxLines = 1
                                     )
                                     Text(
@@ -1200,7 +1200,7 @@ private fun PlayerScreenContent(
                                     )
                                 }
                                 if (index == currentMediaIndex) {
-                                    Text(tr("NOW", languageCode), color = Color(0xFFC7F36B), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                    Text(tr("NOW", languageCode), color = ZvxAccent, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                                 }
                             }
                             Column {
@@ -1364,7 +1364,7 @@ private fun TrackSelectionDialog(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Text(tr("AUDIO", languageCode), color = Color(0xFF7F8A78), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Text(tr("AUDIO", languageCode), color = ZvxMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 if (audioGroups.isEmpty()) {
                     Text(tr("No audio tracks reported by this source.", languageCode), color = Color.LightGray, fontSize = 13.sp)
                 } else {
@@ -1384,7 +1384,7 @@ private fun TrackSelectionDialog(
                 }
 
                 Spacer(Modifier.size(4.dp))
-                Text(tr("SUBTITLES", languageCode), color = Color(0xFF7F8A78), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Text(tr("SUBTITLES", languageCode), color = ZvxMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 TrackOption(
                     label = tr("Off", languageCode),
                     languageCode = languageCode,
@@ -1442,12 +1442,12 @@ private fun TrackOption(
     ) {
         Text(
             text = label,
-            color = if (selected) Color(0xFFC7F36B) else Color.White,
+            color = if (selected) ZvxAccent else Color.White,
             modifier = Modifier.weight(1f),
             maxLines = 2
         )
         if (selected) {
-            Icon(Icons.Default.Check, contentDescription = tr("Selected", languageCode), tint = Color(0xFFC7F36B))
+            Icon(Icons.Default.Check, contentDescription = tr("Selected", languageCode), tint = ZvxAccent)
         }
     }
 }
