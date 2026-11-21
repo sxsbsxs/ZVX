@@ -2,6 +2,17 @@ package com.zvx.player.ui
 
 object ZvxStrings {
     private val zh = mapOf(
+        "Default filter" to "默认筛选",
+        "Default sorting" to "默认排序",
+        "Playback history" to "播放历史",
+        "Favorites" to "收藏",
+        "items" to "项",
+        "Refresh library" to "刷新媒体库",
+        "Open file" to "打开文件",
+        "Play from URL" to "通过 URL 播放",
+        "Selected" to "已选择",
+        "−250 ms" to "−250 毫秒",
+        "+250 ms" to "+250 毫秒",
         "Refresh library" to "刷新媒体库",
         "Open file" to "打开文件",
         "Import M3U playlist" to "导入 M3U 播放列表",
@@ -112,6 +123,17 @@ object ZvxStrings {
         "Repeat: all" to "循环：列表", "Repeat: one" to "循环：单曲", "Repeat: off" to "循环：关闭"
     )
     private val ja = mapOf(
+        "Default filter" to "既定のフィルター",
+        "Default sorting" to "既定の並べ替え",
+        "Playback history" to "再生履歴",
+        "Favorites" to "お気に入り",
+        "items" to "項目",
+        "Refresh library" to "ライブラリを更新",
+        "Open file" to "ファイルを開く",
+        "Play from URL" to "URL から再生",
+        "Selected" to "選択済み",
+        "−250 ms" to "−250 ミリ秒",
+        "+250 ms" to "+250 ミリ秒",
         "Refresh library" to "ライブラリを更新",
         "Open file" to "ファイルを開く",
         "Import M3U playlist" to "M3U プレイリストを読み込む",

@@ -1102,13 +1102,13 @@ private fun PlayerScreenContent(
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
                         TextButton(onClick = { subtitleDelayMs = (subtitleDelayMs - 250).coerceAtLeast(-10_000) }) {
-                            Text("−250 ms")
+                            Text(tr("−250 ms", languageCode))
                         }
                         TextButton(onClick = { subtitleDelayMs = 0 }) {
                             Text(tr("Reset", languageCode))
                         }
                         TextButton(onClick = { subtitleDelayMs = (subtitleDelayMs + 250).coerceAtMost(10_000) }) {
-                            Text("+250 ms")
+                            Text(tr("+250 ms", languageCode))
                         }
                     }
                     Text(
@@ -1341,6 +1341,7 @@ private fun TrackSelectionDialog(
                             val label = trackLabel(format.label, format.language, "Audio", index, languageCode)
                             TrackOption(
                                 label = label,
+                                languageCode = languageCode,
                                 selected = group.isTrackSelected(index),
                                 enabled = group.isTrackSupported(index),
                                 onClick = { onSelectAudio(group, index) }
@@ -1353,6 +1354,7 @@ private fun TrackSelectionDialog(
                 Text(tr("SUBTITLES", languageCode), color = Color(0xFF7F8A78), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 TrackOption(
                     label = tr("Off", languageCode),
+                    languageCode = languageCode,
                     selected = !tracks.groups.any { it.type == C.TRACK_TYPE_TEXT && it.isSelected },
                     onClick = onSubtitleOff
                 )
@@ -1365,6 +1367,7 @@ private fun TrackSelectionDialog(
                             val label = trackLabel(format.label, format.language, "Subtitle", index, languageCode)
                             TrackOption(
                                 label = label,
+                                languageCode = languageCode,
                                 selected = group.isTrackSelected(index),
                                 enabled = group.isTrackSupported(index),
                                 onClick = { onSelectSubtitle(group, index) }
@@ -1394,6 +1397,7 @@ private fun TrackSelectionDialog(
 @Composable
 private fun TrackOption(
     label: String,
+    languageCode: String,
     selected: Boolean,
     enabled: Boolean = true,
     onClick: () -> Unit
@@ -1410,7 +1414,7 @@ private fun TrackOption(
             maxLines = 2
         )
         if (selected) {
-            Icon(Icons.Default.Check, contentDescription = "Selected", tint = Color(0xFFC7F36B))
+            Icon(Icons.Default.Check, contentDescription = tr("Selected", languageCode), tint = Color(0xFFC7F36B))
         }
     }
 }

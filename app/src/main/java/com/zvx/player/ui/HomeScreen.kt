@@ -312,10 +312,10 @@ fun HomeScreen(
                     access = MediaPermission.current(context)
                     reloadToken++
                 }) {
-                    Icon(Icons.Default.Refresh, contentDescription = "Refresh library", tint = ZvxMuted)
+                    Icon(Icons.Default.Refresh, contentDescription = tr("Refresh library", languageCode), tint = ZvxMuted)
                 }
                 IconButton(onClick = onChooseFile) {
-                    Icon(Icons.Default.FolderOpen, contentDescription = "Open file", tint = ZvxText)
+                    Icon(Icons.Default.FolderOpen, contentDescription = tr("Open file", languageCode), tint = ZvxText)
                 }
                 IconButton(
                     onClick = {
@@ -324,13 +324,13 @@ fun HomeScreen(
                         )
                     }
                 ) {
-                    Icon(Icons.Default.PlaylistAdd, contentDescription = "Import M3U playlist", tint = ZvxAccent)
+                    Icon(Icons.Default.PlaylistAdd, contentDescription = tr("Import M3U playlist", languageCode), tint = ZvxAccent)
                 }
                 IconButton(onClick = { showStreamDialog = true }) {
-                    Icon(Icons.Default.Link, contentDescription = "Play from URL", tint = ZvxAccent)
+                    Icon(Icons.Default.Link, contentDescription = tr("Play from URL", languageCode), tint = ZvxAccent)
                 }
                 IconButton(onClick = { showSettingsDialog = true }) {
-                    Icon(Icons.Default.Settings, contentDescription = "Settings", tint = ZvxText)
+                    Icon(Icons.Default.Settings, contentDescription = tr("Settings", languageCode), tint = ZvxText)
                 }
             }
 
@@ -511,18 +511,18 @@ fun HomeScreen(
                         }
                     }
                     Text(tr("LIBRARY", languageCode), color = ZvxMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    Text("Default filter: ${selectedFilter.label}", color = ZvxText, fontSize = 13.sp)
-                    Text("Default sorting: ${selectedSort.label}", color = ZvxText, fontSize = 13.sp)
+                    Text("${tr("Default filter", languageCode)}: ${tr(selectedFilter.label, languageCode)}", color = ZvxText, fontSize = 13.sp)
+                    Text("${tr("Default sorting", languageCode)}: ${tr(selectedSort.label, languageCode)}", color = ZvxText, fontSize = 13.sp)
                     Text(tr("Your filter and sorting choices are saved on this device.", languageCode), color = ZvxMuted, fontSize = 11.sp)
                     Text(tr("DATA MANAGEMENT", languageCode), color = ZvxMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    Text("Playback history · ${recentUris.size} items", color = ZvxText, fontSize = 13.sp)
+                    Text("${tr("Playback history", languageCode)} · ${recentUris.size} ${tr("items", languageCode)}", color = ZvxText, fontSize = 13.sp)
                     TextButton(onClick = { showSettingsDialog = false; showHistoryScreen = true }, modifier = Modifier.fillMaxWidth()) {
                         Text(tr("Open playback history", languageCode), color = ZvxAccent)
                     }
                     TextButton(onClick = { showSettingsDialog = false; showClearHistoryDialog = true }, modifier = Modifier.fillMaxWidth()) {
                         Text(tr("Clear playback history", languageCode), color = MaterialTheme.colorScheme.error)
                     }
-                    Text("Favorites · ${favoriteUris.size} items", color = ZvxText, fontSize = 13.sp)
+                    Text("${tr("Favorites", languageCode)} · ${favoriteUris.size} ${tr("items", languageCode)}", color = ZvxText, fontSize = 13.sp)
                     TextButton(onClick = { showSettingsDialog = false; showFavoritesScreen = true }, modifier = Modifier.fillMaxWidth()) {
                         Text(tr("Open favorites", languageCode), color = ZvxAccent)
                     }
@@ -689,14 +689,14 @@ private fun FavoritesScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onBack) {
-                Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = ZvxText)
+                Icon(Icons.Default.ArrowBack, contentDescription = tr("Back", languageCode), tint = ZvxText)
             }
             Column(modifier = Modifier.weight(1f)) {
                 Text(tr("Favorites", languageCode), color = ZvxText, fontSize = 21.sp, fontWeight = FontWeight.Bold)
                 Text("${entries.size} ${tr("saved items", languageCode)}", color = ZvxMuted, fontSize = 11.sp)
             }
             TextButton(onClick = onClearAll, enabled = entries.isNotEmpty()) {
-                Text("Clear all", color = if (entries.isEmpty()) ZvxMuted else MaterialTheme.colorScheme.error)
+                Text(tr("Clear all", languageCode), color = if (entries.isEmpty()) ZvxMuted else MaterialTheme.colorScheme.error)
             }
         }
         if (entries.isEmpty()) {
@@ -762,14 +762,14 @@ private fun PlaybackHistoryScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onBack) {
-                Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = ZvxText)
+                Icon(Icons.Default.ArrowBack, contentDescription = tr("Back", languageCode), tint = ZvxText)
             }
             Column(modifier = Modifier.weight(1f)) {
                 Text(tr("Playback history", languageCode), color = ZvxText, fontSize = 21.sp, fontWeight = FontWeight.Bold)
                 Text("${entries.size} ${tr("recently played", languageCode)}", color = ZvxMuted, fontSize = 11.sp)
             }
             TextButton(onClick = onClearAll, enabled = entries.isNotEmpty()) {
-                Text("Clear all", color = if (entries.isEmpty()) ZvxMuted else MaterialTheme.colorScheme.error)
+                Text(tr("Clear all", languageCode), color = if (entries.isEmpty()) ZvxMuted else MaterialTheme.colorScheme.error)
             }
         }
         if (entries.isEmpty()) {
