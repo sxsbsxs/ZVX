@@ -656,6 +656,7 @@ private fun HomeNavigationBar(selectedFilter: LibraryFilter, languageCode: Strin
                 LibraryFilter.ALL to Icons.Default.VideoLibrary,
                 LibraryFilter.VIDEO to Icons.Default.Movie,
                 LibraryFilter.AUDIO to Icons.Default.MusicNote,
+                LibraryFilter.RECENT to Icons.Default.History,
                 LibraryFilter.FAVORITES to Icons.Default.Star
             ).forEach { (filter, icon) ->
                 val selected = selectedFilter == filter
