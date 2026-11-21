@@ -145,7 +145,6 @@ fun HomeScreen(
 
     LaunchedEffect(importPlaylistUri) {
         val selectedUri = importPlaylistUri ?: return@LaunchedEffect
-        importPlaylistUri = null
         val content = withContext(Dispatchers.IO) {
             runCatching {
                 context.contentResolver.openInputStream(selectedUri)
@@ -169,6 +168,7 @@ fun HomeScreen(
                 )
             }
         }
+        importPlaylistUri = null
     }
 
     LaunchedEffect(access, reloadToken) {
