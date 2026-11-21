@@ -374,7 +374,13 @@ fun HomeScreen(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 22.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Text(tr("Your library", languageCode), color = ZvxText, fontSize = 24.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.4).sp)
+                Text(
+                    tr(if (selectedFilter == LibraryFilter.ALL) "Your library" else selectedFilter.label, languageCode),
+                    color = ZvxText,
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = (-0.4).sp
+                )
                 Text(
                     if (!access.hasAny) {
                         tr("Give ZVX access to build your local collection.", languageCode)
@@ -551,7 +557,7 @@ fun HomeScreen(
             dismissButton = {
                 TextButton(onClick = {
                     showClearHistoryDialog = false
-                    showSettingsScreen = true
+                    showSettingsScreen = !showHistoryScreen
                 }) { Text(tr("Cancel", languageCode)) }
             },
             containerColor = ZvxSurface,
@@ -575,7 +581,7 @@ fun HomeScreen(
             dismissButton = {
                 TextButton(onClick = {
                     showClearFavoritesDialog = false
-                    showSettingsScreen = true
+                    showSettingsScreen = !showFavoritesScreen
                 }) { Text(tr("Cancel", languageCode)) }
             },
             containerColor = ZvxSurface,
