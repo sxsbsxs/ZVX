@@ -11,7 +11,7 @@ object AppLanguageStore {
     fun load(context: Context): String {
         val saved = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .getString(KEY_LANGUAGE, null)
-        if (saved in supportedCodes) return saved.orEmpty()
+        if (saved != null && saved in supportedCodes) return saved
         return when (Locale.getDefault().language.lowercase(Locale.ROOT)) {
             "zh" -> "zh"
             "ja" -> "ja"
