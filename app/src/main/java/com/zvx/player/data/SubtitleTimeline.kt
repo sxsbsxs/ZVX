@@ -6,7 +6,7 @@ package com.zvx.player.data
  */
 object SubtitleTimeline {
     private val cueTimingLine = Regex(
-        """^(\\s*)(\\d{1,}:\\d{2}(?::\\d{2})?[,.]\\d{3})(\\s+-->\\s+)(\\d{1,}:\\d{2}(?::\\d{2})?[,.]\\d{3})(.*)$"""
+        """^(\s*)(\d{1,}:\d{2}(?::\d{2})?[,.]\d{3})(\s+-->\s+)(\d{1,}:\d{2}(?::\d{2})?[,.]\d{3})(.*)$"""
     )
 
     fun shift(content: String, offsetMs: Int): String {
