@@ -7,6 +7,7 @@ import android.net.Uri
 import android.provider.DocumentsContract
 import android.os.Build
 import android.util.Size
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
@@ -205,6 +206,10 @@ fun HomeScreen(
             recentUris = PlaybackHistoryStore.getRecent(context)
             favoriteUris = MediaFavoritesStore.getFavorites(context)
         }
+    }
+
+    BackHandler(enabled = showHistoryScreen) {
+        showHistoryScreen = false
     }
 
     val mediaByUri = media.associateBy { it.uri.toString() }
@@ -502,7 +507,12 @@ fun HomeScreen(
                     showClearHistoryDialog = false
                 }) { Text("Clear", color = MaterialTheme.colorScheme.error) }
             },
-            dismissButton = { TextButton(onClick = { showClearHistoryDialog = false; showSettingsDialog = true }) { Text("Cancel") } },
+            dismissButton = {
+                TextButton(onClick = {
+                    showClearHistoryDialog = false
+                    showSettingsDialog = !showHistoryScreen
+                }) { Text("Cancel") }
+            },
             containerColor = ZvxSurface,
             titleContentColor = ZvxText,
             textContentColor = ZvxMuted
