@@ -20,6 +20,17 @@ object PlaybackHistoryStore {
         }.getOrDefault(emptyList())
     }
 
+    fun remove(context: Context, uri: String) {
+        if (uri.isBlank()) return
+        val updated = getRecent(context).filterNot { it == uri }
+        val json = JSONArray()
+        updated.forEach(json::put)
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putString(KEY_RECENT, json.toString())
+            .apply()
+    }
+
     fun clear(context: Context) {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().remove(KEY_RECENT).apply()
     }
