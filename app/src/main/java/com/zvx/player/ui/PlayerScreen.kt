@@ -97,6 +97,8 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.CaptionStyleCompat
 import androidx.media3.ui.PlayerView
 import com.zvx.player.data.PlaybackProgressStore
+import com.zvx.player.data.PlaybackSettingsStore
+import com.zvx.player.data.PlaybackPreferences
 import com.zvx.player.data.MediaEntry
 import com.zvx.player.platform.NativeMediaBridge
 import kotlinx.coroutines.delay
@@ -171,6 +173,7 @@ private fun PlayerScreenContent(
     val context = LocalContext.current
     val activity = remember(context) { context.findActivity() }
     val audioManager = remember(context) { context.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
+    val storedPreferences = remember(context) { PlaybackSettingsStore.load(context) }
     val originalScreenBrightness = remember(activity) { activity?.window?.attributes?.screenBrightness ?: -1f }
     val originalRequestedOrientation = remember(activity) { activity?.requestedOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED }
     var immersiveLandscape by remember(videoUri) { mutableStateOf(false) }
@@ -183,15 +186,15 @@ private fun PlayerScreenContent(
     var duration by remember(videoUri) { mutableLongStateOf(0L) }
     var scrubPosition by remember(videoUri) { mutableStateOf<Long?>(null) }
     var playbackError by remember(videoUri) { mutableStateOf<String?>(null) }
-    var speedIndex by remember(videoUri) { mutableStateOf(1) }
+    var speedIndex by remember(videoUri) { mutableIntStateOf(storedPreferences.speedIndex) }
     var trackDialogVisible by remember(videoUri) { mutableStateOf(false) }
     var queueDialogVisible by remember(videoUri) { mutableStateOf(false) }
     var editableQueue by remember(videoUri, queue) { mutableStateOf(queue.toList()) }
     var optionsDialogVisible by remember(videoUri) { mutableStateOf(false) }
-    var aspectModeIndex by remember(videoUri) { mutableIntStateOf(0) }
+    var aspectModeIndex by remember(videoUri) { mutableIntStateOf(storedPreferences.aspectMode) }
     var sleepTimerMinutes by remember(videoUri) { mutableIntStateOf(0) }
-    var subtitleSizeSp by remember(videoUri) { mutableIntStateOf(18) }
-    var subtitleBackgroundEnabled by remember(videoUri) { mutableStateOf(true) }
+    var subtitleSizeSp by remember(videoUri) { mutableIntStateOf(storedPreferences.subtitleSizeSp) }
+    var subtitleBackgroundEnabled by remember(videoUri) { mutableStateOf(storedPreferences.subtitleBackgroundEnabled) }
     var shuffleEnabled by remember(player) { mutableStateOf(player.shuffleModeEnabled) }
     var repeatMode by remember(player) { mutableIntStateOf(player.repeatMode) }
     var currentMediaIndex by remember(player) { mutableIntStateOf(player.currentMediaItemIndex) }
@@ -406,6 +409,18 @@ private fun PlayerScreenContent(
         } else {
             audioArtwork = null
         }
+    }
+
+    LaunchedEffect(speedIndex, aspectModeIndex, subtitleSizeSp, subtitleBackgroundEnabled) {
+        PlaybackSettingsStore.save(
+            context,
+            PlaybackPreferences(
+                speedIndex = speedIndex,
+                aspectMode = aspectModeIndex,
+                subtitleSizeSp = subtitleSizeSp,
+                subtitleBackgroundEnabled = subtitleBackgroundEnabled
+            )
+        )
     }
 
     LaunchedEffect(controlsVisible, isPlaying) {

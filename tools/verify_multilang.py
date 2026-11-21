@@ -49,6 +49,7 @@ def main():
         "Player supports queue browsing, previous/next, shuffle and repeat": "Playback queue" in kotlin and "seekToPreviousMediaItem" in kotlin and "seekToNextMediaItem" in kotlin and "shuffleModeEnabled" in kotlin and "REPEAT_MODE_ALL" in kotlin,
         "Player exposes display sizing and sleep timer options": "RESIZE_MODE_FILL" in kotlin and "RESIZE_MODE_ZOOM" in kotlin and "sleepTimerMinutes" in kotlin and "Sleep timer finished" in kotlin,
         "Subtitle style controls update the subtitle renderer": "setFixedTextSize" in kotlin and "CaptionStyleCompat" in kotlin and "subtitleBackgroundEnabled" in kotlin,
+        "Playback settings persist locally": "PlaybackSettingsStore.load" in kotlin and "PlaybackSettingsStore.save" in kotlin and (ROOT / "app/src/main/java/com/zvx/player/data/PlaybackSettingsStore.kt").is_file(),
         "Player supports horizontal swipe-to-seek": "gestureMode == 1" in kotlin and "horizontalSeekDelta" in kotlin and "Seek to " in kotlin,
         "Queue can be reordered, edited and cleared": "moveMediaItem(index, index - 1)" in kotlin and "removeMediaItem(index)" in kotlin and "Clear queue" in kotlin,
         "Media library supports persistent favorites": "MediaFavoritesStore.toggle" in (ROOT / "app/src/main/java/com/zvx/player/ui/HomeScreen.kt").read_text() and "FAVORITES" in (ROOT / "app/src/main/java/com/zvx/player/ui/HomeScreen.kt").read_text(),
