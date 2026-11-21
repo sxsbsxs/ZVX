@@ -21,7 +21,7 @@ class SubtitleTimelineTest {
     @Test
     fun clampsEarlyCuesAtZero() {
         val source = "00:00:00,100 --> 00:00:01,000\nHello"
-        val expected = "00:00:00,000 --> 00:00:00,900\nHello"
+        val expected = "00:00:00,000 --> 00:00:00,500\nHello"
         assertEquals(expected, SubtitleTimeline.shift(source, -500))
     }
 
