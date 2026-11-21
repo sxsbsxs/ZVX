@@ -20,6 +20,7 @@ A clean, modern Android media player with a modular multi-language foundation.
 - Play, pause, seek, skip ±10 seconds with buttons or double-tap left/right on the video, and change playback speed (0.75×–2×).
 - On-screen gestures: horizontal swipe to preview and seek; drag vertically on the left to adjust brightness or the right to adjust media volume; app brightness is restored when leaving the player.
 - Playlist playback from the currently filtered library, with an in-player queue editor, reorder up/down, remove items, clear upcoming items, previous / next controls, shuffle and repeat modes.
+- Save the current playback queue and playing item on-device; restore the last queue from the library screen after relaunch.
 - Video frame sizing modes: Fit, Fill and Crop; foreground playback sleep timer with 15 / 30 / 45 / 60 minute presets.
 - Persist playback speed, aspect mode and subtitle appearance preferences on-device.
 - Background audio playback through Android MediaSessionService with media notification controls; playlist navigation is exposed to system media controls.

@@ -118,6 +118,7 @@ fun PlayerScreen(
     modifier: Modifier = Modifier,
     isAudio: Boolean = false,
     queue: List<MediaEntry> = emptyList(),
+    onQueueChanged: (List<MediaEntry>, Uri?) -> Unit = { _, _ -> },
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
@@ -161,6 +162,7 @@ fun PlayerScreen(
             modifier = modifier,
             isAudio = isAudio,
             queue = queue,
+            onQueueChanged = onQueueChanged,
             onBack = onBack,
             player = activeController
         )
@@ -173,6 +175,7 @@ private fun PlayerScreenContent(
     modifier: Modifier,
     isAudio: Boolean,
     queue: List<MediaEntry>,
+    onQueueChanged: (List<MediaEntry>, Uri?) -> Unit,
     onBack: () -> Unit,
     player: Player
 ) {
@@ -391,6 +394,7 @@ private fun PlayerScreenContent(
             override fun onTimelineChanged(timeline: androidx.media3.common.Timeline, reason: Int) {
                 queueSize = player.mediaItemCount
                 currentMediaIndex = player.currentMediaItemIndex
+                onQueueChanged(editableQueue, player.currentMediaItem?.localConfiguration?.uri)
             }
 
             override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
@@ -404,6 +408,7 @@ private fun PlayerScreenContent(
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                 currentMediaIndex = player.currentMediaItemIndex
                 queueSize = player.mediaItemCount
+                onQueueChanged(editableQueue, mediaItem?.localConfiguration?.uri)
                 currentTitle = mediaItem?.mediaMetadata?.title?.toString()
                     ?: mediaItem?.localConfiguration?.uri?.lastPathSegment?.substringAfterLast('/')
                     ?: "Now playing"
@@ -1144,6 +1149,7 @@ private fun PlayerScreenContent(
                                         editableQueue = editableQueue.toMutableList().apply {
                                             add(index - 1, removeAt(index))
                                         }
+                                        onQueueChanged(editableQueue, player.currentMediaItem?.localConfiguration?.uri)
                                     }
                                 ) {
                                     Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Move up", tint = Color.White)
@@ -1155,6 +1161,7 @@ private fun PlayerScreenContent(
                                         editableQueue = editableQueue.toMutableList().apply {
                                             add(index + 1, removeAt(index))
                                         }
+                                        onQueueChanged(editableQueue, player.currentMediaItem?.localConfiguration?.uri)
                                     }
                                 ) {
                                     Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Move down", tint = Color.White)
@@ -1164,6 +1171,7 @@ private fun PlayerScreenContent(
                                 onClick = {
                                     player.removeMediaItem(index)
                                     editableQueue = editableQueue.toMutableList().apply { removeAt(index) }
+                                    onQueueChanged(editableQueue, player.currentMediaItem?.localConfiguration?.uri)
                                 }
                             ) {
                                 Icon(Icons.Default.Delete, contentDescription = "Remove from queue", tint = Color(0xFFE58C83))
@@ -1214,6 +1222,7 @@ private fun PlayerScreenContent(
                                     player.removeMediaItems(0, oldIndex)
                                 }
                                 editableQueue = listOfNotNull(playingEntry)
+                                onQueueChanged(editableQueue, playingItem.localConfiguration?.uri)
                                 queueDialogVisible = false
                             }
                         },

@@ -86,6 +86,7 @@ import com.zvx.player.data.MediaPermission
 import com.zvx.player.data.MediaStoreRepository
 import com.zvx.player.data.PlaybackHistoryStore
 import com.zvx.player.data.LibraryPreferencesStore
+import com.zvx.player.data.SavedPlaybackQueue
 import com.zvx.player.ui.theme.ZvxAccent
 import com.zvx.player.ui.theme.ZvxBackground
 import com.zvx.player.ui.theme.ZvxMuted
@@ -109,6 +110,8 @@ private enum class LibrarySort(val label: String) {
 fun HomeScreen(
     modifier: Modifier = Modifier,
     onChooseFile: () -> Unit,
+    savedQueue: SavedPlaybackQueue = SavedPlaybackQueue(),
+    onResumeQueue: (SavedPlaybackQueue) -> Unit = {},
     onPlayMedia: (String, Boolean, List<MediaEntry>) -> Unit,
     onOpenStream: (String) -> Unit
 ) {
@@ -342,6 +345,34 @@ fun HomeScreen(
                     color = ZvxMuted,
                     fontSize = 13.sp
                 )
+                if (savedQueue.entries.isNotEmpty()) {
+                    Surface(
+                        onClick = { onResumeQueue(savedQueue) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        color = ZvxSurface,
+                        border = BorderStroke(1.dp, ZvxAccent.copy(alpha = 0.35f))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 11.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.PlayArrow, contentDescription = null, tint = ZvxAccent)
+                            Spacer(Modifier.width(10.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("Resume last queue", color = ZvxText, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                                Text(
+                                    "${savedQueue.entries.size} items · ${savedQueue.entries.firstOrNull { it.uri == savedQueue.currentUri }?.title ?: "Saved playlist"}",
+                                    color = ZvxMuted,
+                                    fontSize = 11.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            Text("PLAY", color = ZvxAccent, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
 
                 OutlinedTextField(
                     value = searchText,
