@@ -68,6 +68,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import com.zvx.player.data.PlaybackProgressStore
+import com.zvx.player.platform.NativeMediaBridge
 import kotlinx.coroutines.delay
 
 @Composable
@@ -316,7 +317,12 @@ fun PlayerScreen(
                 ) {
                     IconButton(
                         onClick = {
-                            player.seekTo((player.currentPosition - 10_000L).coerceAtLeast(0L))
+                            player.seekTo(
+                                NativeMediaBridge.clampSeekPosition(
+                                    player.currentPosition - 10_000L,
+                                    player.duration.takeIf { it > 0L && it != C.TIME_UNSET } ?: 0L
+                                )
+                            )
                         },
                         modifier = Modifier.size(54.dp)
                     ) {
@@ -354,8 +360,12 @@ fun PlayerScreen(
                     Spacer(Modifier.size(28.dp))
                     IconButton(
                         onClick = {
-                            val end = if (duration > 0L) duration else Long.MAX_VALUE
-                            player.seekTo((player.currentPosition + 10_000L).coerceAtMost(end))
+                            player.seekTo(
+                                NativeMediaBridge.clampSeekPosition(
+                                    player.currentPosition + 10_000L,
+                                    player.duration.takeIf { it > 0L && it != C.TIME_UNSET } ?: 0L
+                                )
+                            )
                         },
                         modifier = Modifier.size(54.dp)
                     ) {
@@ -380,7 +390,14 @@ fun PlayerScreen(
                             scrubPosition = (fraction * duration).toLong()
                         },
                         onValueChangeFinished = {
-                            scrubPosition?.let(player::seekTo)
+                            scrubPosition?.let { requestedPosition ->
+                                player.seekTo(
+                                    NativeMediaBridge.clampSeekPosition(
+                                        requestedPosition,
+                                        duration
+                                    )
+                                )
+                            }
                             scrubPosition = null
                         },
                         enabled = duration > 0L,

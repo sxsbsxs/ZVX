@@ -16,8 +16,12 @@ class MultiLanguageLayoutTest(unittest.TestCase):
     def test_native_sources_are_wired(self):
         cmake = (verify_multilang.ROOT / "app/src/main/cpp/CMakeLists.txt").read_text()
         gradle = (verify_multilang.ROOT / "app/build.gradle.kts").read_text()
+        java = (verify_multilang.ROOT / "app/src/main/java/com/zvx/player/platform/NativeMediaBridge.java").read_text()
+        kotlin = (verify_multilang.ROOT / "app/src/main/java/com/zvx/player/ui/PlayerScreen.kt").read_text()
         self.assertIn("add_library(zvx_native SHARED", cmake)
         self.assertIn("externalNativeBuild", gradle)
+        self.assertIn("nativeClampSeekPosition", java)
+        self.assertIn("NativeMediaBridge.clampSeekPosition", kotlin)
 
 
 if __name__ == "__main__":
