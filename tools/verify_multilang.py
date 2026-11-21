@@ -18,6 +18,8 @@ def required_files():
         "app/src/main/java/com/zvx/player/data/LibraryPreferencesStore.kt",
         "app/src/main/java/com/zvx/player/data/SubtitleTimeline.kt",
         "app/src/main/java/com/zvx/player/data/PlaybackQueueStore.kt",
+        "app/src/main/java/com/zvx/player/data/AppLanguageStore.kt",
+        "app/src/main/java/com/zvx/player/ui/ZvxStrings.kt",
     ]
 
 
@@ -63,6 +65,8 @@ def main():
         "Dedicated playback history allows individual removal": "PlaybackHistoryScreen(" in (ROOT / "app/src/main/java/com/zvx/player/ui/HomeScreen.kt").read_text() and "PlaybackHistoryStore.remove(context, uri)" in (ROOT / "app/src/main/java/com/zvx/player/ui/HomeScreen.kt").read_text() and "fun remove(context: Context, uri: String)" in (ROOT / "app/src/main/java/com/zvx/player/data/PlaybackHistoryStore.kt").read_text(),
         "Dedicated favorites screen supports remove and replay": "FavoritesScreen(" in (ROOT / "app/src/main/java/com/zvx/player/ui/HomeScreen.kt").read_text() and "favoriteEntries" in (ROOT / "app/src/main/java/com/zvx/player/ui/HomeScreen.kt").read_text() and "Open favorites" in (ROOT / "app/src/main/java/com/zvx/player/ui/HomeScreen.kt").read_text(),
         "Playback queue persists and can be restored": "PlaybackQueueStore.save" in (ROOT / "app/src/main/java/com/zvx/player/MainActivity.kt").read_text() and "PlaybackQueueStore.load" in (ROOT / "app/src/main/java/com/zvx/player/MainActivity.kt").read_text() and "Resume last queue" in (ROOT / "app/src/main/java/com/zvx/player/ui/HomeScreen.kt").read_text() and "onQueueChanged" in (ROOT / "app/src/main/java/com/zvx/player/ui/PlayerScreen.kt").read_text(),
+        "Three language selection persists": "AppLanguageStore.load" in (ROOT / "app/src/main/java/com/zvx/player/MainActivity.kt").read_text() and "AppLanguageStore.save" in (ROOT / "app/src/main/java/com/zvx/player/MainActivity.kt").read_text() and "onLanguageChange" in (ROOT / "app/src/main/java/com/zvx/player/ui/HomeScreen.kt").read_text() and "simplified Chinese" not in (ROOT / "app/src/main/java/com/zvx/player/ui/ZvxStrings.kt").read_text() and '"zh"' in (ROOT / "app/src/main/java/com/zvx/player/data/AppLanguageStore.kt").read_text() and '"ja"' in (ROOT / "app/src/main/java/com/zvx/player/data/AppLanguageStore.kt").read_text(),
+        "Audio player shows artist, album and queue position": "Unknown artist" in (ROOT / "app/src/main/java/com/zvx/player/ui/PlayerScreen.kt").read_text() and "TRACK" in (ROOT / "app/src/main/java/com/zvx/player/ui/PlayerScreen.kt").read_text() and "shadowElevation = 18.dp" in (ROOT / "app/src/main/java/com/zvx/player/ui/PlayerScreen.kt").read_text(),
         "Subtitle delay persists and rewrites external SRT/WebVTT cue times": "subtitleDelayMs" in kotlin and "SubtitleTimeline.shift(content, subtitleDelayMs)" in kotlin and "MimeTypes.APPLICATION_SUBRIP" in kotlin and "MimeTypes.TEXT_VTT" in kotlin and "KEY_SUBTITLE_DELAY" in (ROOT / "app/src/main/java/com/zvx/player/data/PlaybackSettingsStore.kt").read_text(),
     }
     for label, passed in checks.items():

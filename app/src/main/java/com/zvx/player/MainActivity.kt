@@ -13,6 +13,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import com.zvx.player.data.AppLanguageStore
 import com.zvx.player.data.MediaEntry
 import com.zvx.player.data.PlaybackQueueStore
 import com.zvx.player.data.SavedPlaybackQueue
@@ -26,6 +27,9 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             ZvxTheme {
+                var languageCode by androidx.compose.runtime.remember {
+                    mutableStateOf(AppLanguageStore.load(this@MainActivity))
+                }
                 var activeSource by rememberSaveable { mutableStateOf<String?>(null) }
                 var activeIsAudio by rememberSaveable { mutableStateOf(false) }
                 var activeQueue by androidx.compose.runtime.remember { mutableStateOf<List<MediaEntry>>(emptyList()) }
@@ -56,6 +60,10 @@ class MainActivity : ComponentActivity() {
                 if (activeSource == null) {
                     HomeScreen(
                         modifier = Modifier.fillMaxSize(),
+                        languageCode = languageCode,
+                        onLanguageChange = { code ->
+                            languageCode = AppLanguageStore.save(this@MainActivity, code)
+                        },
                         onChooseFile = {
                             filePicker.launch(arrayOf("video/*", "audio/*", "application/octet-stream"))
                         },
@@ -88,6 +96,7 @@ class MainActivity : ComponentActivity() {
                         videoUri = Uri.parse(activeSource),
                         isAudio = activeIsAudio,
                         queue = activeQueue,
+                        languageCode = languageCode,
                         modifier = Modifier.fillMaxSize(),
                         onQueueChanged = { updatedQueue, currentUri ->
                             activeQueue = updatedQueue

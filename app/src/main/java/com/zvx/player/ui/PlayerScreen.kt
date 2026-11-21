@@ -117,6 +117,7 @@ fun PlayerScreen(
     videoUri: Uri,
     modifier: Modifier = Modifier,
     isAudio: Boolean = false,
+    languageCode: String = "en",
     queue: List<MediaEntry> = emptyList(),
     onQueueChanged: (List<MediaEntry>, Uri?) -> Unit = { _, _ -> },
     onBack: () -> Unit
@@ -152,7 +153,7 @@ fun PlayerScreen(
             contentAlignment = Alignment.Center
         ) {
             Text(
-                connectionError ?: "Connecting to ZVX player…",
+                connectionError ?: tr("Connecting to ZVX player…", languageCode),
                 color = Color.White
             )
         }
@@ -161,6 +162,7 @@ fun PlayerScreen(
             videoUri = videoUri,
             modifier = modifier,
             isAudio = isAudio,
+            languageCode = languageCode,
             queue = queue,
             onQueueChanged = onQueueChanged,
             onBack = onBack,
@@ -174,6 +176,7 @@ private fun PlayerScreenContent(
     videoUri: Uri,
     modifier: Modifier,
     isAudio: Boolean,
+    languageCode: String,
     queue: List<MediaEntry>,
     onQueueChanged: (List<MediaEntry>, Uri?) -> Unit,
     onBack: () -> Unit,
@@ -686,12 +689,19 @@ private fun PlayerScreenContent(
             ) {
                 val artwork = audioArtwork
                 if (artwork != null) {
-                    Image(
-                        bitmap = artwork,
-                        contentDescription = "Album artwork",
-                        modifier = Modifier.size(232.dp).clip(RoundedCornerShape(28.dp)),
-                        contentScale = ContentScale.Crop
-                    )
+                    Surface(
+                        modifier = Modifier.size(248.dp),
+                        shape = RoundedCornerShape(30.dp),
+                        color = Color(0xFF252B34),
+                        shadowElevation = 18.dp
+                    ) {
+                        Image(
+                            bitmap = artwork,
+                            contentDescription = "Album artwork",
+                            modifier = Modifier.fillMaxSize().padding(5.dp).clip(RoundedCornerShape(26.dp)),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
                 } else {
                     Surface(
                         modifier = Modifier.size(232.dp),
@@ -716,20 +726,39 @@ private fun PlayerScreenContent(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
-                if (currentArtist.isNotBlank() || currentAlbum.isNotBlank()) {
+                Text(
+                    text = currentArtist.ifBlank { tr("Unknown artist", languageCode) },
+                    color = Color.White.copy(alpha = 0.68f),
+                    fontSize = 13.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (currentAlbum.isNotBlank()) {
                     Text(
-                        text = listOf(currentArtist, currentAlbum).filter { it.isNotBlank() }.joinToString(" · "),
-                        color = Color.White.copy(alpha = 0.68f),
-                        fontSize = 13.sp,
+                        text = currentAlbum,
+                        color = Color.White.copy(alpha = 0.48f),
+                        fontSize = 11.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
                 Text(
-                    text = "NOW PLAYING",
+                    text = tr("Audio player", languageCode).uppercase(),
+                    color = Color.White.copy(alpha = 0.48f),
+                    fontSize = 9.sp,
+                    letterSpacing = 1.8.sp
+                )
+                Text(
+                    text = tr("NOW PLAYING", languageCode),
                     color = Color.White.copy(alpha = 0.58f),
                     fontSize = 10.sp,
                     letterSpacing = 2.sp
+                )
+                Text(
+                    text = "${tr("TRACK", languageCode)} ${currentMediaIndex + 1} / ${queueSize.coerceAtLeast(1)}",
+                    color = Color.White.copy(alpha = 0.42f),
+                    fontSize = 9.sp,
+                    letterSpacing = 1.4.sp
                 )
             }
         }
@@ -792,7 +821,7 @@ private fun PlayerScreenContent(
                                 }
                             }
                         ) {
-                            Text(if (immersiveLandscape) "Exit" else "Full", color = Color.White, fontWeight = FontWeight.Bold)
+                            Text(tr(if (immersiveLandscape) "Exit" else "Full", languageCode), color = Color.White, fontWeight = FontWeight.Bold)
                         }
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                             TextButton(
@@ -814,7 +843,7 @@ private fun PlayerScreenContent(
                     }
                     if (queueSize > 1) {
                         TextButton(onClick = { queueDialogVisible = true }) {
-                            Text("Queue", color = Color.White, fontWeight = FontWeight.Bold)
+                            Text(tr("Queue", languageCode), color = Color.White, fontWeight = FontWeight.Bold)
                         }
                     }
                     IconButton(onClick = { trackDialogVisible = true }) {
@@ -833,7 +862,7 @@ private fun PlayerScreenContent(
                         Text(speeds[speedIndex].toString() + "×", color = Color.White, fontWeight = FontWeight.Bold)
                     }
                     TextButton(onClick = { optionsDialogVisible = true }) {
-                        Text("Options", color = Color.White, fontWeight = FontWeight.Bold)
+                        Text(tr("Options", languageCode), color = Color.White, fontWeight = FontWeight.Bold)
                     }
                 }
 
@@ -983,11 +1012,11 @@ private fun PlayerScreenContent(
     if (optionsDialogVisible) {
         AlertDialog(
             onDismissRequest = { optionsDialogVisible = false },
-            title = { Text("Playback options", fontWeight = FontWeight.Bold) },
+            title = { Text(tr("Playback options", languageCode), fontWeight = FontWeight.Bold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     if (!isAudio) {
-                        Text("VIDEO SIZE", color = Color(0xFF7F8A78), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text(tr("VIDEO SIZE", languageCode), color = Color(0xFF7F8A78), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceEvenly
@@ -1002,10 +1031,10 @@ private fun PlayerScreenContent(
                             }
                         }
                     }
-                    Text("SLEEP TIMER", color = Color(0xFF7F8A78), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text(tr("SLEEP TIMER", languageCode), color = Color(0xFF7F8A78), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     Text(
                         if (sleepTimerMinutes > 0) "Playback will pause in $sleepTimerMinutes minutes."
-                        else "Pause playback automatically after a set time.",
+                        else tr("Pause playback automatically after a set time.", languageCode),
                         color = Color.White.copy(alpha = 0.72f),
                         fontSize = 12.sp
                     )
@@ -1029,11 +1058,11 @@ private fun PlayerScreenContent(
                             onClick = { sleepTimerMinutes = 0 },
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("Cancel sleep timer")
+                            Text(tr("Cancel sleep timer", languageCode))
                         }
                     }
-                    Text("SUBTITLE STYLE", color = Color(0xFF7F8A78), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    Text("Text size · $subtitleSizeSp sp", color = Color.White.copy(alpha = 0.76f), fontSize = 12.sp)
+                    Text(tr("SUBTITLE STYLE", languageCode), color = Color(0xFF7F8A78), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text("${tr("Text size", languageCode)} · $subtitleSizeSp sp", color = Color.White.copy(alpha = 0.76f), fontSize = 12.sp)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceEvenly
@@ -1048,9 +1077,9 @@ private fun PlayerScreenContent(
                             Text("A+")
                         }
                     }
-                    Text("SUBTITLE TIMING", color = Color(0xFF7F8A78), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text(tr("SUBTITLE TIMING", languageCode), color = Color(0xFF7F8A78), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     Text(
-                        "External SRT / WebVTT delay · ${subtitleDelayMs} ms",
+                        "${tr("External SRT / WebVTT delay", languageCode)} · ${subtitleDelayMs} ms",
                         color = Color.White.copy(alpha = 0.76f),
                         fontSize = 12.sp
                     )
@@ -1083,7 +1112,7 @@ private fun PlayerScreenContent(
                         }
                     }
                     Text(
-                        "Positive values delay subtitles; negative values show them earlier. Embedded subtitles follow the source timing.",
+                        tr("Positive values delay subtitles; negative values show them earlier. Embedded subtitles follow the source timing.", languageCode),
                         color = Color.White.copy(alpha = 0.55f),
                         fontSize = 10.sp
                     )
@@ -1091,12 +1120,12 @@ private fun PlayerScreenContent(
                         onClick = { subtitleBackgroundEnabled = !subtitleBackgroundEnabled },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(if (subtitleBackgroundEnabled) "Subtitle background: on" else "Subtitle background: off")
+                        Text(tr(if (subtitleBackgroundEnabled) "Subtitle background: on" else "Subtitle background: off", languageCode))
                     }
                 }
             },
             confirmButton = {
-                TextButton(onClick = { optionsDialogVisible = false }) { Text("Done") }
+                TextButton(onClick = { optionsDialogVisible = false }) { Text(tr("Done", languageCode)) }
             }
         )
     }
@@ -1104,7 +1133,7 @@ private fun PlayerScreenContent(
     if (queueDialogVisible) {
         AlertDialog(
             onDismissRequest = { queueDialogVisible = false },
-            title = { Text("Playback queue · ${editableQueue.size}", fontWeight = FontWeight.Bold) },
+            title = { Text(tr("Playback queue", languageCode) + " · ${editableQueue.size}", fontWeight = FontWeight.Bold) },
             text = {
                 Column(
                     modifier = Modifier
@@ -1228,12 +1257,12 @@ private fun PlayerScreenContent(
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Clear queue · keep current")
+                        Text(tr("Clear queue · keep current", languageCode))
                     }
                 }
             },
             confirmButton = {
-                TextButton(onClick = { queueDialogVisible = false }) { Text("Close") }
+                TextButton(onClick = { queueDialogVisible = false }) { Text(tr("Close", languageCode)) }
             }
         )
     }
@@ -1242,6 +1271,7 @@ private fun PlayerScreenContent(
         TrackSelectionDialog(
             tracks = availableTracks,
             onDismiss = { trackDialogVisible = false },
+            languageCode = languageCode,
             onSelectAudio = { group, trackIndex ->
                 player.trackSelectionParameters = player.trackSelectionParameters
                     .buildUpon()
@@ -1281,6 +1311,7 @@ private fun PlayerScreenContent(
 @Composable
 private fun TrackSelectionDialog(
     tracks: Tracks,
+    languageCode: String,
     onDismiss: () -> Unit,
     onSelectAudio: (Tracks.Group, Int) -> Unit,
     onSelectSubtitle: (Tracks.Group, Int) -> Unit,
@@ -1292,7 +1323,7 @@ private fun TrackSelectionDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Audio & subtitles", fontWeight = FontWeight.Bold) },
+        title = { Text(tr("Audio & subtitles", languageCode), fontWeight = FontWeight.Bold) },
         text = {
             Column(
                 modifier = Modifier
@@ -1300,9 +1331,9 @@ private fun TrackSelectionDialog(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Text("AUDIO", color = Color(0xFF7F8A78), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Text(tr("AUDIO", languageCode), color = Color(0xFF7F8A78), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 if (audioGroups.isEmpty()) {
-                    Text("No audio tracks reported by this source.", color = Color.LightGray, fontSize = 13.sp)
+                    Text(tr("No audio tracks reported by this source.", languageCode), color = Color.LightGray, fontSize = 13.sp)
                 } else {
                     audioGroups.forEach { group ->
                         for (index in 0 until group.length) {
@@ -1319,14 +1350,14 @@ private fun TrackSelectionDialog(
                 }
 
                 Spacer(Modifier.size(4.dp))
-                Text("SUBTITLES", color = Color(0xFF7F8A78), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Text(tr("SUBTITLES", languageCode), color = Color(0xFF7F8A78), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 TrackOption(
-                    label = "Off",
+                    label = tr("Off", languageCode),
                     selected = !tracks.groups.any { it.type == C.TRACK_TYPE_TEXT && it.isSelected },
                     onClick = onSubtitleOff
                 )
                 if (subtitleGroups.isEmpty()) {
-                    Text("No embedded subtitles reported.", color = Color.LightGray, fontSize = 13.sp)
+                    Text(tr("No embedded subtitles reported.", languageCode), color = Color.LightGray, fontSize = 13.sp)
                 } else {
                     subtitleGroups.forEach { group ->
                         for (index in 0 until group.length) {
@@ -1345,17 +1376,17 @@ private fun TrackSelectionDialog(
                 TextButton(onClick = onLoadExternalSubtitle) {
                     Icon(Icons.Default.ClosedCaption, contentDescription = null)
                     Spacer(Modifier.size(8.dp))
-                    Text("Load external subtitle")
+                    Text(tr("Load external subtitle", languageCode))
                 }
                 Text(
-                    "Supported external formats: SRT, VTT, TTML, SSA and ASS.",
+                    tr("Supported external formats: SRT, VTT, TTML, SSA and ASS.", languageCode),
                     color = Color.LightGray.copy(alpha = 0.7f),
                     fontSize = 11.sp
                 )
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Done") }
+            TextButton(onClick = onDismiss) { Text(tr("Done", languageCode)) }
         }
     )
 }
