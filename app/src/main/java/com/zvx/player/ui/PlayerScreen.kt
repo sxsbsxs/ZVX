@@ -5,6 +5,8 @@ import android.content.ComponentName
 import android.content.pm.ActivityInfo
 import android.content.Context
 import android.content.ContextWrapper
+import android.graphics.BitmapFactory
+import android.media.MediaMetadataRetriever
 import android.content.Intent
 import android.media.AudioManager
 import android.net.Uri
@@ -17,6 +19,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -68,7 +71,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -188,6 +194,9 @@ private fun PlayerScreenContent(
     var currentMediaIndex by remember(player) { mutableIntStateOf(player.currentMediaItemIndex) }
     var queueSize by remember(player) { mutableIntStateOf(player.mediaItemCount) }
     var currentTitle by remember(videoUri) { mutableStateOf(videoUri.lastPathSegment?.substringAfterLast('/')?.take(64) ?: "Now playing") }
+    var currentArtist by remember(videoUri) { mutableStateOf("") }
+    var currentAlbum by remember(videoUri) { mutableStateOf("") }
+    var audioArtwork by remember(videoUri) { mutableStateOf<ImageBitmap?>(null) }
     var seekFeedback by remember(videoUri) { mutableStateOf<String?>(null) }
     var availableTracks by remember(player) { mutableStateOf(player.currentTracks) }
     val speeds = listOf(0.75f, 1f, 1.25f, 1.5f, 2f)
@@ -209,6 +218,7 @@ private fun PlayerScreenContent(
                         MediaMetadata.Builder()
                             .setTitle(entry.title)
                             .setArtist(entry.artist ?: "ZVX")
+                            .setAlbumTitle(entry.album)
                             .build()
                     )
                     .build()
@@ -325,6 +335,8 @@ private fun PlayerScreenContent(
                 currentTitle = mediaItem?.mediaMetadata?.title?.toString()
                     ?: mediaItem?.localConfiguration?.uri?.lastPathSegment?.substringAfterLast('/')
                     ?: "Now playing"
+                currentArtist = mediaItem?.mediaMetadata?.artist?.toString().orEmpty()
+                currentAlbum = mediaItem?.mediaMetadata?.albumTitle?.toString().orEmpty()
                 val itemUri = mediaItem?.localConfiguration?.uri?.toString()
                 val resumePosition = itemUri?.let { PlaybackProgressStore.getPosition(context, it) } ?: 0L
                 if (resumePosition >= 5_000L && player.currentPosition < 5_000L) {
@@ -370,6 +382,26 @@ private fun PlayerScreenContent(
                 )
             }
             delay(5_000L)
+        }
+    }
+
+    LaunchedEffect(isAudio, currentMediaIndex, videoUri) {
+        if (isAudio) {
+            val artworkUri = player.currentMediaItem?.localConfiguration?.uri ?: videoUri
+            audioArtwork = withContext(kotlinx.coroutines.Dispatchers.IO) {
+                runCatching {
+                    val retriever = MediaMetadataRetriever()
+                    try {
+                        retriever.setDataSource(context, artworkUri)
+                        val bytes = retriever.embeddedPicture ?: return@runCatching null
+                        BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
+                    } finally {
+                        retriever.release()
+                    }
+                }.getOrNull()
+            }
+        } else {
+            audioArtwork = null
         }
     }
 
@@ -540,16 +572,34 @@ private fun PlayerScreenContent(
 
         if (isAudio) {
             Column(
-                modifier = Modifier.align(Alignment.Center).padding(32.dp),
+                modifier = Modifier.align(Alignment.Center).padding(horizontal = 28.dp, vertical = 24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.MusicNote,
-                    contentDescription = null,
-                    tint = Color(0xFFC7F36B),
-                    modifier = Modifier.size(72.dp)
-                )
+                val artwork = audioArtwork
+                if (artwork != null) {
+                    Image(
+                        bitmap = artwork,
+                        contentDescription = "Album artwork",
+                        modifier = Modifier.size(232.dp).clip(RoundedCornerShape(28.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Surface(
+                        modifier = Modifier.size(232.dp),
+                        color = Color(0xFF252B34),
+                        shape = RoundedCornerShape(28.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.MusicNote,
+                                contentDescription = null,
+                                tint = Color(0xFFC7F36B),
+                                modifier = Modifier.size(88.dp)
+                            )
+                        }
+                    }
+                }
                 Text(
                     text = title,
                     color = Color.White,
@@ -558,6 +608,15 @@ private fun PlayerScreenContent(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
+                if (currentArtist.isNotBlank() || currentAlbum.isNotBlank()) {
+                    Text(
+                        text = listOf(currentArtist, currentAlbum).filter { it.isNotBlank() }.joinToString(" · "),
+                        color = Color.White.copy(alpha = 0.68f),
+                        fontSize = 13.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
                 Text(
                     text = "NOW PLAYING",
                     color = Color.White.copy(alpha = 0.58f),
