@@ -14,6 +14,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -26,6 +27,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -473,6 +477,30 @@ fun HomeScreen(
                     onChooseFile = onChooseFile,
                     modifier = Modifier.weight(1f)
                 )
+            } else if (selectedFilter == LibraryFilter.VIDEO) {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    modifier = Modifier.weight(1f),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                        start = 18.dp, end = 18.dp, top = 8.dp, bottom = 24.dp
+                    ),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    gridItems(visibleMedia, key = { it.uri.toString() }) { entry ->
+                        MediaGridCard(
+                            entry = entry,
+                            languageCode = languageCode,
+                            favorite = entry.uri.toString() in favoriteUris,
+                            onToggleFavorite = { favoriteUris = MediaFavoritesStore.toggle(context, entry.uri.toString()) },
+                            onClick = {
+                                PlaybackHistoryStore.markPlayed(context, entry.uri.toString())
+                                recentUris = PlaybackHistoryStore.getRecent(context)
+                                onPlayMedia(entry.uri.toString(), false, visibleMedia)
+                            }
+                        )
+                    }
+                }
             } else {
                 LazyColumn(
                     modifier = Modifier.weight(1f),
@@ -1022,6 +1050,71 @@ private fun EmptyLibrary(
             Icon(Icons.Default.FolderOpen, contentDescription = null)
             Spacer(Modifier.width(8.dp))
             Text(tr("Open a file", languageCode))
+        }
+    }
+}
+
+@Composable
+private fun MediaGridCard(
+    entry: MediaEntry,
+    languageCode: String,
+    favorite: Boolean,
+    onToggleFavorite: () -> Unit,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        color = ZvxSurface
+    ) {
+        Column {
+            Box(modifier = Modifier.fillMaxWidth()) {
+                MediaThumbnail(
+                    entry = entry,
+                    modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f)
+                )
+                Surface(
+                    modifier = Modifier.align(Alignment.BottomEnd).padding(7.dp),
+                    shape = RoundedCornerShape(5.dp),
+                    color = Color(0xCC090B0E)
+                ) {
+                    Text(
+                        formatDuration(entry.durationMs),
+                        color = Color.White,
+                        fontSize = 10.sp,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
+                    )
+                }
+                IconButton(
+                    onClick = onToggleFavorite,
+                    modifier = Modifier.align(Alignment.TopEnd).padding(3.dp).size(34.dp)
+                ) {
+                    Icon(
+                        imageVector = if (favorite) Icons.Default.Star else Icons.Default.StarBorder,
+                        contentDescription = tr(if (favorite) "Remove from favorites" else "Add to favorites", languageCode),
+                        tint = if (favorite) ZvxAccent else Color.White,
+                        modifier = Modifier.size(19.dp)
+                    )
+                }
+            }
+            Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 9.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(
+                    entry.title,
+                    color = ZvxText,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    entry.folderName,
+                    color = ZvxMuted,
+                    fontSize = 10.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
     }
 }
