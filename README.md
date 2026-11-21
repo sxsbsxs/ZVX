@@ -5,8 +5,9 @@ A clean, modern Android media player with a modular multi-language foundation.
 ## Included in this foundation
 
 - Browse local video and audio collections through MediaStore, with search, Video / Audio / Recent / Favorites filters, folder filtering and sorting by newest, name, duration or size.
-- Add or remove local media favorites; favorites persist on-device.
-- Import M3U playlists containing absolute HTTP(S), content:// or file:// media locations; mixed playlists are filtered to the first item's media type when opened.
+- Add or remove local media favorites; favorites persist on-device and can be cleared from the in-app settings.
+- Import M3U playlists with absolute HTTP(S), content:// and file:// locations, plus relative URL/local paths resolved against the playlist location where the provider grants access to sibling files; mixed playlists are filtered to the first item's media type when opened.
+- Persist library filter and sorting choices across app launches; manage recent history and favorites from the settings dialog.
 - Show MediaStore video thumbnails and embedded audio album artwork where available.
 - Request media permissions only when the user chooses to build the library; Android 14+ selected-video access is supported.
 - Remember the last 50 played local items and resume playback position on-device.

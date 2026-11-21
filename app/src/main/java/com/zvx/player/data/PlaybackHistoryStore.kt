@@ -20,6 +20,10 @@ object PlaybackHistoryStore {
         }.getOrDefault(emptyList())
     }
 
+    fun clear(context: Context) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().remove(KEY_RECENT).apply()
+    }
+
     fun markPlayed(context: Context, uri: String) {
         if (uri.isBlank()) return
         val updated = (listOf(uri) + getRecent(context).filterNot { it == uri }).take(MAX_ITEMS)

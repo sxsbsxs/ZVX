@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.media.MediaMetadataRetriever
 import android.net.Uri
+import android.provider.DocumentsContract
 import android.os.Build
 import android.util.Size
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -37,6 +38,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.AlertDialog
@@ -79,6 +81,7 @@ import com.zvx.player.data.MediaKind
 import com.zvx.player.data.MediaPermission
 import com.zvx.player.data.MediaStoreRepository
 import com.zvx.player.data.PlaybackHistoryStore
+import com.zvx.player.data.LibraryPreferencesStore
 import com.zvx.player.ui.theme.ZvxAccent
 import com.zvx.player.ui.theme.ZvxBackground
 import com.zvx.player.ui.theme.ZvxMuted
@@ -87,6 +90,8 @@ import com.zvx.player.ui.theme.ZvxSurfaceRaised
 import com.zvx.player.ui.theme.ZvxText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.File
+import java.net.URI
 
 private enum class LibraryFilter(val label: String) {
     ALL("All"), VIDEO("Videos"), AUDIO("Audio"), RECENT("Recent"), FAVORITES("Favorites")
@@ -109,10 +114,18 @@ fun HomeScreen(
     var recentUris by remember { mutableStateOf(PlaybackHistoryStore.getRecent(context)) }
     var favoriteUris by remember { mutableStateOf(MediaFavoritesStore.getFavorites(context)) }
     var searchText by remember { mutableStateOf("") }
-    var selectedFilter by remember { mutableStateOf(LibraryFilter.ALL) }
+    val savedLibraryPreferences = remember(context) { LibraryPreferencesStore.load(context) }
+    var selectedFilter by remember {
+        mutableStateOf(LibraryFilter.entries.firstOrNull { it.name == savedLibraryPreferences.filterName } ?: LibraryFilter.ALL)
+    }
     var selectedFolder by remember { mutableStateOf("All folders") }
-    var selectedSort by remember { mutableStateOf(LibrarySort.NEWEST) }
+    var selectedSort by remember {
+        mutableStateOf(LibrarySort.entries.firstOrNull { it.name == savedLibraryPreferences.sortName } ?: LibrarySort.NEWEST)
+    }
     var showSortDialog by remember { mutableStateOf(false) }
+    var showSettingsDialog by remember { mutableStateOf(false) }
+    var showClearHistoryDialog by remember { mutableStateOf(false) }
+    var showClearFavoritesDialog by remember { mutableStateOf(false) }
     var showStreamDialog by remember { mutableStateOf(false) }
     var importPlaylistUri by remember { mutableStateOf<Uri?>(null) }
     var playlistImportError by remember { mutableStateOf<String?>(null) }
@@ -143,6 +156,10 @@ fun HomeScreen(
         }
     }
 
+    LaunchedEffect(selectedFilter, selectedSort) {
+        LibraryPreferencesStore.save(context, selectedFilter.name, selectedSort.name)
+    }
+
     LaunchedEffect(importPlaylistUri) {
         val selectedUri = importPlaylistUri ?: return@LaunchedEffect
         val content = withContext(Dispatchers.IO) {
@@ -155,9 +172,9 @@ fun HomeScreen(
         if (content.isNullOrBlank()) {
             playlistImportError = "Unable to read this playlist file."
         } else {
-            val imported = parseM3uPlaylist(content)
+            val imported = parseM3uPlaylist(content, selectedUri)
             if (imported.isEmpty()) {
-                playlistImportError = "No usable absolute media URLs or file URIs were found. Relative paths are not supported yet."
+                playlistImportError = "No supported media entries were found. Relative paths are resolved against the playlist when its storage provider allows access to sibling files."
             } else {
                 val selectedKind = imported.first().kind
                 val playableQueue = imported.filter { it.kind == selectedKind }
@@ -250,6 +267,9 @@ fun HomeScreen(
                 }
                 IconButton(onClick = { showStreamDialog = true }) {
                     Icon(Icons.Default.Link, contentDescription = "Play from URL", tint = ZvxAccent)
+                }
+                IconButton(onClick = { showSettingsDialog = true }) {
+                    Icon(Icons.Default.Settings, contentDescription = "Settings", tint = ZvxText)
                 }
             }
 
@@ -381,6 +401,73 @@ fun HomeScreen(
                 }
             }
         }
+    }
+
+    if (showSettingsDialog) {
+        AlertDialog(
+            onDismissRequest = { showSettingsDialog = false },
+            title = { Text("ZVX settings", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("LIBRARY", color = ZvxMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text("Default filter: ${selectedFilter.label}", color = ZvxText, fontSize = 13.sp)
+                    Text("Default sorting: ${selectedSort.label}", color = ZvxText, fontSize = 13.sp)
+                    Text("Your filter and sorting choices are saved on this device.", color = ZvxMuted, fontSize = 11.sp)
+                    Text("DATA MANAGEMENT", color = ZvxMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text("Playback history · ${recentUris.size} items", color = ZvxText, fontSize = 13.sp)
+                    TextButton(onClick = { showSettingsDialog = false; showClearHistoryDialog = true }, modifier = Modifier.fillMaxWidth()) {
+                        Text("Clear playback history", color = MaterialTheme.colorScheme.error)
+                    }
+                    Text("Favorites · ${favoriteUris.size} items", color = ZvxText, fontSize = 13.sp)
+                    TextButton(onClick = { showSettingsDialog = false; showClearFavoritesDialog = true }, modifier = Modifier.fillMaxWidth()) {
+                        Text("Clear favorites", color = MaterialTheme.colorScheme.error)
+                    }
+                    Text("Media permissions and playback data remain on your device. ZVX does not upload this library information.", color = ZvxMuted, fontSize = 11.sp)
+                }
+            },
+            confirmButton = { TextButton(onClick = { showSettingsDialog = false }) { Text("Done", color = ZvxAccent) } },
+            containerColor = ZvxSurface,
+            titleContentColor = ZvxText,
+            textContentColor = ZvxMuted
+        )
+    }
+
+    if (showClearHistoryDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearHistoryDialog = false },
+            title = { Text("Clear playback history?") },
+            text = { Text("This removes the recent-played list. Saved playback positions are kept.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    PlaybackHistoryStore.clear(context)
+                    recentUris = emptyList()
+                    showClearHistoryDialog = false
+                }) { Text("Clear", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = { TextButton(onClick = { showClearHistoryDialog = false; showSettingsDialog = true }) { Text("Cancel") } },
+            containerColor = ZvxSurface,
+            titleContentColor = ZvxText,
+            textContentColor = ZvxMuted
+        )
+    }
+
+    if (showClearFavoritesDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearFavoritesDialog = false },
+            title = { Text("Clear all favorites?") },
+            text = { Text("This removes favorite markers but does not delete your media files.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    MediaFavoritesStore.clear(context)
+                    favoriteUris = emptyList()
+                    showClearFavoritesDialog = false
+                }) { Text("Clear", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = { TextButton(onClick = { showClearFavoritesDialog = false; showSettingsDialog = true }) { Text("Cancel") } },
+            containerColor = ZvxSurface,
+            titleContentColor = ZvxText,
+            textContentColor = ZvxMuted
+        )
     }
 
     if (showSortDialog) {
@@ -643,7 +730,7 @@ private fun MediaThumbnail(entry: MediaEntry, modifier: Modifier = Modifier) {
 }
 
 
-private fun parseM3uPlaylist(content: String): List<MediaEntry> {
+private fun parseM3uPlaylist(content: String, playlistUri: Uri): List<MediaEntry> {
     val audioExtensions = setOf("mp3", "m4a", "aac", "flac", "wav", "ogg", "opus", "wma")
     val result = mutableListOf<MediaEntry>()
     var pendingTitle: String? = null
@@ -657,11 +744,7 @@ private fun parseM3uPlaylist(content: String): List<MediaEntry> {
         }
         if (line.startsWith("#")) return@forEach
 
-        val parsed = runCatching { Uri.parse(line) }.getOrNull() ?: return@forEach
-        val mediaUri = when (parsed.scheme?.lowercase()) {
-            "http", "https", "content", "file" -> parsed
-            else -> if (line.startsWith("/")) Uri.fromFile(java.io.File(line)) else null
-        } ?: return@forEach
+        val mediaUri = resolveM3uEntryUri(line, playlistUri) ?: return@forEach
         val displayName = mediaUri.lastPathSegment?.substringAfterLast('/')?.takeIf { it.isNotBlank() }
             ?: "Playlist item " + (result.size + 1)
         val extension = displayName.substringAfterLast('.', "").lowercase()
@@ -682,6 +765,50 @@ private fun parseM3uPlaylist(content: String): List<MediaEntry> {
         pendingTitle = null
     }
     return result
+}
+
+private fun resolveM3uEntryUri(rawPath: String, playlistUri: Uri): Uri? {
+    val path = rawPath.trim().trim('"').replace('\\', '/')
+    if (path.isBlank()) return null
+    val parsed = runCatching { Uri.parse(path) }.getOrNull() ?: return null
+    when (parsed.scheme?.lowercase()) {
+        "http", "https" -> return parsed.takeIf { !it.host.isNullOrBlank() }
+        "content", "file" -> return parsed
+    }
+    if (path.startsWith("/")) return runCatching { Uri.fromFile(File(path).canonicalFile) }.getOrNull()
+
+    return when (playlistUri.scheme?.lowercase()) {
+        "http", "https" -> runCatching {
+            val resolved = URI(playlistUri.toString()).resolve(path)
+            Uri.parse(resolved.toString()).takeIf { it.scheme?.lowercase() in setOf("http", "https") && !it.host.isNullOrBlank() }
+        }.getOrNull()
+        "file" -> runCatching {
+            val parent = File(playlistUri.path.orEmpty()).parentFile ?: return@runCatching null
+            Uri.fromFile(File(parent, path).canonicalFile)
+        }.getOrNull()
+        "content" -> resolveDocumentRelativeUri(path, playlistUri)
+        else -> null
+    }
+}
+
+private fun resolveDocumentRelativeUri(path: String, playlistUri: Uri): Uri? {
+    val authority = playlistUri.authority ?: return null
+    val documentId = runCatching { DocumentsContract.getDocumentId(playlistUri) }.getOrNull() ?: return null
+    val parentId = documentId.substringBeforeLast('/', missingDelimiterValue = "")
+    if (parentId.isBlank()) return null
+    val rootPrefix = parentId.substringBefore(':', missingDelimiterValue = "").takeIf { ':' in parentId }?.plus(":").orEmpty()
+    val parentPath = if (rootPrefix.isNotEmpty()) parentId.removePrefix(rootPrefix) else parentId
+    val segments = parentPath.split('/').filter { it.isNotBlank() }.toMutableList()
+    path.split('/').forEach { segment ->
+        when (segment) {
+            "", "." -> Unit
+            ".." -> if (segments.isNotEmpty()) segments.removeAt(segments.lastIndex) else return null
+            else -> segments += segment
+        }
+    }
+    return runCatching {
+        DocumentsContract.buildDocumentUri(authority, rootPrefix + segments.joinToString("/"))
+    }.getOrNull()
 }
 
 private fun MediaEntry.subtitleLine(): String {

@@ -18,6 +18,10 @@ object MediaFavoritesStore {
         }.getOrDefault(emptyList())
     }
 
+    fun clear(context: Context) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().remove(KEY_FAVORITES).apply()
+    }
+
     fun toggle(context: Context, uri: String): List<String> {
         if (uri.isBlank()) return getFavorites(context)
         val current = getFavorites(context)
