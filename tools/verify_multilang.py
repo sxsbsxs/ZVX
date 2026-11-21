@@ -44,6 +44,7 @@ def main():
         "Media session service is registered": "MediaSessionService" in manifest and "foregroundServiceType=\"mediaPlayback\"" in manifest and "MediaSession.Builder" in service,
         "Player UI connects through MediaController": "MediaController.Builder" in kotlin and "SessionToken" in kotlin and "releaseFuture(controllerFuture)" in kotlin,
         "Video player exposes Android PiP": "enterPictureInPictureMode" in kotlin and "PictureInPictureParams.Builder" in kotlin and 'android:supportsPictureInPicture="true"' in manifest,
+        "Video player supports immersive landscape mode": "SCREEN_ORIENTATION_LANDSCAPE" in kotlin and "WindowInsetsCompat.Type.systemBars()" in kotlin and "BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE" in kotlin,
     }
     for label, passed in checks.items():
         print(f"[{'OK' if passed else 'FAIL'}] {label}")

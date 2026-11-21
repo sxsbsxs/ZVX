@@ -2,6 +2,7 @@ package com.zvx.player.ui
 
 import android.app.Activity
 import android.content.ComponentName
+import android.content.pm.ActivityInfo
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
@@ -11,6 +12,8 @@ import android.os.Build
 import android.app.PictureInPictureParams
 import android.util.Rational
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -151,6 +154,8 @@ private fun PlayerScreenContent(
     val activity = remember(context) { context.findActivity() }
     val audioManager = remember(context) { context.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
     val originalScreenBrightness = remember(activity) { activity?.window?.attributes?.screenBrightness ?: -1f }
+    val originalRequestedOrientation = remember(activity) { activity?.requestedOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED }
+    var immersiveLandscape by remember(videoUri) { mutableStateOf(false) }
     val savedPosition = remember(videoUri) {
         PlaybackProgressStore.getPosition(context, videoUri.toString())
     }
@@ -241,10 +246,14 @@ private fun PlayerScreenContent(
 
     DisposableEffect(activity) {
         onDispose {
-            activity?.window?.let { window ->
-                val attributes = window.attributes
-                attributes.screenBrightness = originalScreenBrightness
-                window.attributes = attributes
+            activity?.let { host ->
+                host.requestedOrientation = originalRequestedOrientation
+                host.window?.let { window ->
+                    WindowInsetsControllerCompat(window, window.decorView).show(WindowInsetsCompat.Type.systemBars())
+                    val attributes = window.attributes
+                    attributes.screenBrightness = originalScreenBrightness
+                    window.attributes = attributes
+                }
             }
         }
     }
@@ -474,21 +483,45 @@ private fun PlayerScreenContent(
                             letterSpacing = 1.5.sp
                         )
                     }
-                    if (!isAudio && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    if (!isAudio) {
                         TextButton(
                             onClick = {
                                 val hostActivity = activity
                                 if (hostActivity != null) {
-                                    controlsVisible = false
-                                    hostActivity.enterPictureInPictureMode(
-                                        PictureInPictureParams.Builder()
-                                            .setAspectRatio(Rational(16, 9))
-                                            .build()
-                                    )
+                                    immersiveLandscape = !immersiveLandscape
+                                    if (immersiveLandscape) {
+                                        hostActivity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                                        WindowInsetsControllerCompat(hostActivity.window, hostActivity.window.decorView).apply {
+                                            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                                            hide(WindowInsetsCompat.Type.systemBars())
+                                        }
+                                        controlsVisible = false
+                                    } else {
+                                        hostActivity.requestedOrientation = originalRequestedOrientation
+                                        WindowInsetsControllerCompat(hostActivity.window, hostActivity.window.decorView).show(WindowInsetsCompat.Type.systemBars())
+                                        controlsVisible = true
+                                    }
                                 }
                             }
                         ) {
-                            Text("PiP", color = Color.White, fontWeight = FontWeight.Bold)
+                            Text(if (immersiveLandscape) "Exit" else "Full", color = Color.White, fontWeight = FontWeight.Bold)
+                        }
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            TextButton(
+                                onClick = {
+                                    val hostActivity = activity
+                                    if (hostActivity != null) {
+                                        controlsVisible = false
+                                        hostActivity.enterPictureInPictureMode(
+                                            PictureInPictureParams.Builder()
+                                                .setAspectRatio(Rational(16, 9))
+                                                .build()
+                                        )
+                                    }
+                                }
+                            ) {
+                                Text("PiP", color = Color.White, fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
                     IconButton(onClick = { trackDialogVisible = true }) {
