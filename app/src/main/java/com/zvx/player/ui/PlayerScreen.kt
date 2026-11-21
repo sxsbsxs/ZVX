@@ -23,6 +23,7 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -541,7 +542,7 @@ private fun PlayerScreenContent(
         }
     }
 
-    Box(modifier = modifier.fillMaxSize().background(Color.Black)) {
+    Box(modifier = modifier.fillMaxSize().background(if (isAudio) Color(0xFF111318) else Color.Black)) {
         AndroidView(
             modifier = Modifier.fillMaxSize().pointerInput(player) {
                 detectTapGestures(
@@ -698,72 +699,41 @@ private fun PlayerScreenContent(
         }
 
         if (isAudio) {
-            Column(
-                modifier = Modifier.align(Alignment.Center).padding(horizontal = 28.dp, vertical = 24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+            BoxWithConstraints(
+                modifier = Modifier.align(Alignment.Center).fillMaxWidth().padding(horizontal = 30.dp, vertical = 68.dp)
             ) {
-                val artwork = audioArtwork
-                if (artwork != null) {
-                    Surface(
-                        modifier = Modifier.size(232.dp),
-                        shape = RoundedCornerShape(22.dp),
-                        color = Color(0xFF252B34),
-                        shadowElevation = 18.dp
-                    ) {
-                        Image(
-                            bitmap = artwork,
-                            contentDescription = tr("Album artwork", languageCode),
-                            modifier = Modifier.fillMaxSize().padding(4.dp).clip(RoundedCornerShape(19.dp)),
-                            contentScale = ContentScale.Crop
-                        )
-                    }
-                } else {
-                    Surface(
-                        modifier = Modifier.size(232.dp),
-                        color = Color(0xFF252B34),
-                        shape = RoundedCornerShape(22.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = Icons.Default.MusicNote,
-                                contentDescription = null,
-                                tint = ZvxAccent,
-                                modifier = Modifier.size(88.dp)
+                val artworkSize = maxWidth.coerceAtMost(280.dp)
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(13.dp)
+                ) {
+                    Text(tr("NOW PLAYING", languageCode), color = ZvxAccent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+                    val artwork = audioArtwork
+                    Surface(modifier = Modifier.size(artworkSize), shape = RoundedCornerShape(18.dp), color = Color(0xFF252B34), shadowElevation = 14.dp) {
+                        if (artwork != null) {
+                            Image(
+                                bitmap = artwork,
+                                contentDescription = tr("Album artwork", languageCode),
+                                modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(18.dp)),
+                                contentScale = ContentScale.Crop
                             )
+                        } else {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(Icons.Default.MusicNote, contentDescription = null, tint = ZvxAccent, modifier = Modifier.size(76.dp))
+                            }
                         }
                     }
-                }
-                Text(
-                    text = title,
-                    color = Color.White,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = currentArtist.ifBlank { tr("Unknown artist", languageCode) },
-                    color = Color.White.copy(alpha = 0.68f),
-                    fontSize = 13.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                if (currentAlbum.isNotBlank()) {
-                    Text(
-                        text = currentAlbum,
-                        color = Color.White.copy(alpha = 0.48f),
-                        fontSize = 11.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-                if (queueSize > 1) {
-                    Text(
-                        "${currentMediaIndex + 1} / $queueSize",
-                        color = Color.White.copy(alpha = 0.42f),
-                        fontSize = 10.sp
-                    )
+                    Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(title, color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        Text(currentArtist.ifBlank { tr("Unknown artist", languageCode) }, color = Color.White.copy(alpha = 0.68f), fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        if (currentAlbum.isNotBlank()) {
+                            Text(currentAlbum, color = Color.White.copy(alpha = 0.48f), fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                    }
+                    if (queueSize > 1) {
+                        Text(currentMediaIndex.toString() + " / " + queueSize, color = Color.White.copy(alpha = 0.42f), fontSize = 10.sp)
+                    }
                 }
             }
         }
@@ -790,7 +760,7 @@ private fun PlayerScreenContent(
                         Icon(Icons.Default.ArrowBack, contentDescription = tr("Back", languageCode), tint = Color.White)
                     }
                     Text(
-                        title,
+                        if (isAudio) tr("Audio player", languageCode) else title,
                         modifier = Modifier.weight(1f),
                         color = Color.White,
                         fontSize = 15.sp,

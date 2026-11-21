@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -36,6 +37,8 @@ import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Movie
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PlaylistAdd
@@ -134,7 +137,7 @@ fun HomeScreen(
         mutableStateOf(LibrarySort.entries.firstOrNull { it.name == savedLibraryPreferences.sortName } ?: LibrarySort.NEWEST)
     }
     var showSortDialog by remember { mutableStateOf(false) }
-    var showSettingsDialog by remember { mutableStateOf(false) }
+    var showSettingsScreen by remember { mutableStateOf(false) }
     var showHistoryScreen by remember { mutableStateOf(false) }
     var showFavoritesScreen by remember { mutableStateOf(false) }
     var showClearHistoryDialog by remember { mutableStateOf(false) }
@@ -218,9 +221,10 @@ fun HomeScreen(
         }
     }
 
-    BackHandler(enabled = showHistoryScreen || showFavoritesScreen) {
+    BackHandler(enabled = showHistoryScreen || showFavoritesScreen || showSettingsScreen) {
         showHistoryScreen = false
         showFavoritesScreen = false
+        showSettingsScreen = false
     }
 
     val mediaByUri = media.associateBy { it.uri.toString() }
@@ -300,6 +304,20 @@ fun HomeScreen(
                     onPlayMedia(entry.uri.toString(), entry.kind == MediaKind.AUDIO, queue)
                 }
             )
+        } else if (showSettingsScreen) {
+            SettingsScreen(
+                languageCode = languageCode,
+                onLanguageChange = onLanguageChange,
+                selectedFilter = selectedFilter,
+                selectedSort = selectedSort,
+                historyCount = recentUris.size,
+                favoritesCount = favoriteUris.size,
+                onBack = { showSettingsScreen = false },
+                onOpenHistory = { showSettingsScreen = false; showHistoryScreen = true },
+                onOpenFavorites = { showSettingsScreen = false; showFavoritesScreen = true },
+                onClearHistory = { showClearHistoryDialog = true },
+                onClearFavorites = { showClearFavoritesDialog = true }
+            )
         } else {
         Column(modifier = Modifier.fillMaxSize()) {
             Row(
@@ -324,6 +342,11 @@ fun HomeScreen(
                             onClick = { showMoreMenu = false; access = MediaPermission.current(context); reloadToken++ }
                         )
                         DropdownMenuItem(
+                            text = { Text(tr("Playback history", languageCode)) },
+                            leadingIcon = { Icon(Icons.Default.History, contentDescription = null) },
+                            onClick = { showMoreMenu = false; showHistoryScreen = true }
+                        )
+                        DropdownMenuItem(
                             text = { Text(tr("Import M3U playlist", languageCode)) },
                             leadingIcon = { Icon(Icons.Default.PlaylistAdd, contentDescription = null) },
                             onClick = {
@@ -338,7 +361,7 @@ fun HomeScreen(
                         )
                     }
                 }
-                IconButton(onClick = { showSettingsDialog = true }) {
+                IconButton(onClick = { showSettingsScreen = true }) {
                     Icon(Icons.Default.Settings, contentDescription = tr("Settings", languageCode), tint = ZvxText)
                 }
             }
@@ -405,27 +428,7 @@ fun HomeScreen(
                     )
                 )
 
-                Row(
-                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    LibraryFilter.entries.forEach { filter ->
-                        Surface(
-                            onClick = { selectedFilter = filter },
-                            shape = RoundedCornerShape(11.dp),
-                            color = if (selectedFilter == filter) ZvxSurfaceRaised else Color.Transparent
-                        ) {
-                            Text(
-                                tr(filter.label, languageCode),
-                                color = if (selectedFilter == filter) ZvxText else ZvxMuted,
-                                fontSize = 12.sp,
-                                fontWeight = if (selectedFilter == filter) FontWeight.SemiBold else FontWeight.Normal,
-                                modifier = Modifier.padding(horizontal = 13.dp, vertical = 9.dp)
-                            )
-                        }
-                    }
-                }
+                Spacer(Modifier.height(2.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -496,51 +499,13 @@ fun HomeScreen(
                     }
                 }
             }
+            HomeNavigationBar(
+                selectedFilter = selectedFilter,
+                languageCode = languageCode,
+                onSelect = { selectedFilter = it }
+            )
         }
         }
-    }
-
-    if (showSettingsDialog) {
-        AlertDialog(
-            onDismissRequest = { showSettingsDialog = false },
-            title = { Text(tr("ZVX settings", languageCode), fontWeight = FontWeight.Bold) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(tr("LANGUAGE", languageCode), color = ZvxMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        listOf("en" to "English", "zh" to "简体中文", "ja" to "日本語").forEach { (code, label) ->
-                            TextButton(onClick = { onLanguageChange(code) }, modifier = Modifier.weight(1f)) {
-                                Text(if (languageCode == code) "• $label" else label, color = if (languageCode == code) ZvxAccent else ZvxText, fontSize = 10.sp, maxLines = 1)
-                            }
-                        }
-                    }
-                    Text(tr("LIBRARY", languageCode), color = ZvxMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    Text("${tr("Default filter", languageCode)}: ${tr(selectedFilter.label, languageCode)}", color = ZvxText, fontSize = 13.sp)
-                    Text("${tr("Default sorting", languageCode)}: ${tr(selectedSort.label, languageCode)}", color = ZvxText, fontSize = 13.sp)
-                    Text(tr("Your filter and sorting choices are saved on this device.", languageCode), color = ZvxMuted, fontSize = 11.sp)
-                    Text(tr("DATA MANAGEMENT", languageCode), color = ZvxMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    Text("${tr("Playback history", languageCode)} · ${recentUris.size} ${tr("items", languageCode)}", color = ZvxText, fontSize = 13.sp)
-                    TextButton(onClick = { showSettingsDialog = false; showHistoryScreen = true }, modifier = Modifier.fillMaxWidth()) {
-                        Text(tr("Open playback history", languageCode), color = ZvxAccent)
-                    }
-                    TextButton(onClick = { showSettingsDialog = false; showClearHistoryDialog = true }, modifier = Modifier.fillMaxWidth()) {
-                        Text(tr("Clear playback history", languageCode), color = MaterialTheme.colorScheme.error)
-                    }
-                    Text("${tr("Favorites", languageCode)} · ${favoriteUris.size} ${tr("items", languageCode)}", color = ZvxText, fontSize = 13.sp)
-                    TextButton(onClick = { showSettingsDialog = false; showFavoritesScreen = true }, modifier = Modifier.fillMaxWidth()) {
-                        Text(tr("Open favorites", languageCode), color = ZvxAccent)
-                    }
-                    TextButton(onClick = { showSettingsDialog = false; showClearFavoritesDialog = true }, modifier = Modifier.fillMaxWidth()) {
-                        Text(tr("Clear favorites", languageCode), color = MaterialTheme.colorScheme.error)
-                    }
-                    Text(tr("Media permissions and playback data remain on your device. ZVX does not upload this library information.", languageCode), color = ZvxMuted, fontSize = 11.sp)
-                }
-            },
-            confirmButton = { TextButton(onClick = { showSettingsDialog = false }) { Text(tr("Done", languageCode), color = ZvxAccent) } },
-            containerColor = ZvxSurface,
-            titleContentColor = ZvxText,
-            textContentColor = ZvxMuted
-        )
     }
 
     if (showClearHistoryDialog) {
@@ -558,7 +523,7 @@ fun HomeScreen(
             dismissButton = {
                 TextButton(onClick = {
                     showClearHistoryDialog = false
-                    showSettingsDialog = !showHistoryScreen
+                    showSettingsScreen = true
                 }) { Text(tr("Cancel", languageCode)) }
             },
             containerColor = ZvxSurface,
@@ -582,7 +547,7 @@ fun HomeScreen(
             dismissButton = {
                 TextButton(onClick = {
                     showClearFavoritesDialog = false
-                    showSettingsDialog = !showFavoritesScreen
+                    showSettingsScreen = true
                 }) { Text(tr("Cancel", languageCode)) }
             },
             containerColor = ZvxSurface,
@@ -676,6 +641,121 @@ fun HomeScreen(
                 onOpenStream(address)
             }
         )
+    }
+}
+
+@Composable
+private fun HomeNavigationBar(selectedFilter: LibraryFilter, languageCode: String, onSelect: (LibraryFilter) -> Unit) {
+    Surface(color = ZvxSurface) {
+        Row(
+            modifier = Modifier.fillMaxWidth().height(66.dp).padding(horizontal = 8.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            listOf(
+                LibraryFilter.ALL to Icons.Default.VideoLibrary,
+                LibraryFilter.VIDEO to Icons.Default.Movie,
+                LibraryFilter.AUDIO to Icons.Default.MusicNote,
+                LibraryFilter.FAVORITES to Icons.Default.Star
+            ).forEach { (filter, icon) ->
+                val selected = selectedFilter == filter
+                Surface(
+                    onClick = { onSelect(filter) },
+                    modifier = Modifier.weight(1f).fillMaxSize(),
+                    shape = RoundedCornerShape(12.dp),
+                    color = if (selected) ZvxSurfaceRaised else Color.Transparent
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                        Icon(icon, contentDescription = tr(filter.label, languageCode), tint = if (selected) ZvxAccent else ZvxMuted, modifier = Modifier.size(19.dp))
+                        Spacer(Modifier.height(3.dp))
+                        Text(tr(filter.label, languageCode), color = if (selected) ZvxText else ZvxMuted, fontSize = 10.sp, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal, maxLines = 1)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingsScreen(
+    languageCode: String,
+    onLanguageChange: (String) -> Unit,
+    selectedFilter: LibraryFilter,
+    selectedSort: LibrarySort,
+    historyCount: Int,
+    favoritesCount: Int,
+    onBack: () -> Unit,
+    onOpenHistory: () -> Unit,
+    onOpenFavorites: () -> Unit,
+    onClearHistory: () -> Unit,
+    onClearFavorites: () -> Unit
+) {
+    Surface(modifier = Modifier.fillMaxSize(), color = ZvxBackground) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.Default.ArrowBack, contentDescription = tr("Back", languageCode), tint = ZvxText)
+                }
+                Text(tr("ZVX settings", languageCode), color = ZvxText, fontSize = 21.sp, fontWeight = FontWeight.SemiBold)
+            }
+            Column(
+                modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(18.dp)
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(tr("LANGUAGE", languageCode), color = ZvxMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                    Surface(color = ZvxSurface, shape = RoundedCornerShape(16.dp)) {
+                        Column(modifier = Modifier.padding(14.dp)) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                listOf("en" to "English", "zh" to "简体中文", "ja" to "日本語").forEach { (code, label) ->
+                                    FilterChip(selected = languageCode == code, onClick = { onLanguageChange(code) }, label = { Text(label, fontSize = 11.sp) }, modifier = Modifier.weight(1f))
+                                }
+                            }
+                        }
+                    }
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(tr("LIBRARY", languageCode), color = ZvxMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                    Surface(color = ZvxSurface, shape = RoundedCornerShape(16.dp)) {
+                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(tr("Default filter", languageCode) + " · " + tr(selectedFilter.label, languageCode), color = ZvxText, fontSize = 13.sp)
+                            Text(tr("Default sorting", languageCode) + " · " + tr(selectedSort.label, languageCode), color = ZvxText, fontSize = 13.sp)
+                            Text(tr("Your filter and sorting choices are saved on this device.", languageCode), color = ZvxMuted, fontSize = 11.sp)
+                        }
+                    }
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(tr("DATA MANAGEMENT", languageCode), color = ZvxMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                    SettingsActionRow(tr("Playback history", languageCode), historyCount.toString() + " " + tr("items", languageCode), tr("Open playback history", languageCode), onOpenHistory)
+                    SettingsActionRow(tr("Favorites", languageCode), favoritesCount.toString() + " " + tr("items", languageCode), tr("Open favorites", languageCode), onOpenFavorites)
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        TextButton(onClick = onClearHistory, modifier = Modifier.weight(1f)) {
+                            Text(tr("Clear playback history", languageCode), color = MaterialTheme.colorScheme.error, fontSize = 11.sp)
+                        }
+                        TextButton(onClick = onClearFavorites, modifier = Modifier.weight(1f)) {
+                            Text(tr("Clear favorites", languageCode), color = MaterialTheme.colorScheme.error, fontSize = 11.sp)
+                        }
+                    }
+                }
+                Surface(color = ZvxSurface, shape = RoundedCornerShape(16.dp)) {
+                    Text(tr("Media permissions and playback data remain on your device. ZVX does not upload this library information.", languageCode), color = ZvxMuted, fontSize = 11.sp, lineHeight = 17.sp, modifier = Modifier.padding(16.dp))
+                }
+                Spacer(Modifier.height(16.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingsActionRow(title: String, detail: String, action: String, onClick: () -> Unit) {
+    Surface(onClick = onClick, modifier = Modifier.fillMaxWidth(), color = ZvxSurface, shape = RoundedCornerShape(16.dp)) {
+        Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(title, color = ZvxText, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                Text(detail, color = ZvxMuted, fontSize = 11.sp)
+            }
+            Text(action, color = ZvxAccent, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+        }
     }
 }
 
@@ -859,10 +939,10 @@ private fun PlaybackHistoryScreen(
 @Composable
 private fun BrandMark() {
     Box(
-        modifier = Modifier.size(42.dp).clip(RoundedCornerShape(14.dp)).background(ZvxAccent),
+        modifier = Modifier.size(36.dp).clip(RoundedCornerShape(11.dp)).background(ZvxAccent),
         contentAlignment = Alignment.Center
     ) {
-        Icon(Icons.Default.PlayArrow, contentDescription = null, tint = ZvxBackground, modifier = Modifier.size(27.dp))
+        Icon(Icons.Default.PlayArrow, contentDescription = null, tint = ZvxBackground, modifier = Modifier.size(23.dp))
     }
 }
 
@@ -874,34 +954,21 @@ private fun PermissionCard(
     onRequest: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = ZvxSurface)
-    ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-            Text(
-                tr(if (!videoAccess && !audioAccess) "Your library is waiting" else "Expand your library", languageCode),
-                color = ZvxText,
-                fontWeight = FontWeight.Bold,
-                fontSize = 15.sp
-            )
-            Text(
-                tr(when {
-                    !videoAccess && !audioAccess -> "Allow access to local videos and music. On Android 14+, you can limit video access to items you select."
-                    !audioAccess -> "Video access is ready. Allow audio access to include music in your library."
-                    else -> "Allow video access to add your local movies and clips."
-                }, languageCode),
-                color = ZvxMuted,
-                fontSize = 12.sp,
-                lineHeight = 18.sp
-            )
-            Button(
-                onClick = onRequest,
-                colors = ButtonDefaults.buttonColors(containerColor = ZvxAccent, contentColor = ZvxBackground)
-            ) {
-                Text(tr("Manage library access", languageCode), fontWeight = FontWeight.Bold)
+    Surface(modifier = modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp), color = ZvxSurface) {
+        Row(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Icon(Icons.Default.FolderOpen, contentDescription = null, tint = ZvxAccent, modifier = Modifier.size(22.dp))
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(tr(if (!videoAccess && !audioAccess) "Your library is waiting" else "Expand your library", languageCode), color = ZvxText, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                Text(
+                    tr(when {
+                        !videoAccess && !audioAccess -> "Allow access to local videos and music. On Android 14+, you can limit video access to items you select."
+                        !audioAccess -> "Video access is ready. Allow audio access to include music in your library."
+                        else -> "Allow video access to add your local movies and clips."
+                    }, languageCode),
+                    color = ZvxMuted, fontSize = 11.sp, lineHeight = 16.sp
+                )
             }
+            TextButton(onClick = onRequest) { Text(tr("Manage library access", languageCode), color = ZvxAccent, fontSize = 11.sp) }
         }
     }
 }
