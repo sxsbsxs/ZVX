@@ -1,5 +1,9 @@
+import sys
 import unittest
 from pathlib import Path
+
+TOOLS_DIR = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(TOOLS_DIR))
 import verify_multilang
 
 
