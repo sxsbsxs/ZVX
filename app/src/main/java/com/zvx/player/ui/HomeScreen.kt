@@ -1,8 +1,6 @@
 package com.zvx.player.ui
 
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.provider.DocumentsContract
 import android.os.Build
@@ -80,6 +78,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.zvx.player.data.MediaEntry
+import com.zvx.player.platform.MediaMetadataProbe
 import com.zvx.player.data.MediaFavoritesStore
 import com.zvx.player.data.MediaKind
 import com.zvx.player.data.MediaPermission
@@ -978,18 +977,7 @@ private fun MediaThumbnail(entry: MediaEntry, modifier: Modifier = Modifier) {
                 if (entry.kind == MediaKind.VIDEO && Build.VERSION.SDK_INT >= 29) {
                     context.contentResolver.loadThumbnail(entry.uri, Size(192, 192), null)
                 } else if (entry.kind == MediaKind.AUDIO) {
-                    val retriever = MediaMetadataRetriever()
-                    try {
-                        retriever.setDataSource(context, entry.uri)
-                        val bytes = retriever.embeddedPicture
-                        if (bytes != null) {
-                            BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                        } else {
-                            null
-                        }
-                    } finally {
-                        retriever.release()
-                    }
+                    MediaMetadataProbe.inspect(context, entry.uri)?.artwork
                 } else {
                     null
                 }

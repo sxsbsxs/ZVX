@@ -36,12 +36,12 @@ A clean, modern Android media player with a modular multi-language foundation.
 
 | Language | Responsibility | Runtime |
 |---|---|---|
-| Kotlin | Android app, Compose UI, library and playback orchestration | Android |
-| Java | Android platform interoperability bridge and native API boundary | Android |
-| C++17 | Small JNI native core for low-level media utilities; designed to grow into optimized native processing | Android NDK |
-| Python 3 | Repository validation and developer/CI tooling; not bundled into the APK | Development / CI |
+| Kotlin | Compose interface, app state, MediaStore library, playback orchestration and portable subtitle fallback | Android |
+| Java | Shared Android media-metadata probe (title, artist, album, duration and decoded embedded artwork), plus the JNI facade and native fallback boundary | Android |
+| C++17 | Native SubRip/WebVTT cue-time shifting used by the subtitle-delay feature, plus bounded seek-position calculations | Android NDK |
+| Python 3 | CI architecture checks and host-compiled regression tests that execute the same C++ subtitle engine used by the APK | Development / CI; not bundled into the APK |
 
-The native C++ layer is intentionally small at this stage. Media decoding and playback remain on AndroidX Media3; adding C++ does not magically add codecs or replace the playback engine. Future native components should be introduced only where profiling or a concrete feature justifies them.
+The Android UI and playback orchestration remain Kotlin/Media3 by design. Java owns the shared Android extractor and album-art platform boundary; C++ executes the same subtitle cue-shift operation called by the player; and Python compiles and regression-tests that native parser in CI. Media decoding itself remains on AndroidX Media3: the native parser does not add codecs or replace the playback engine.
 
 ## Build
 

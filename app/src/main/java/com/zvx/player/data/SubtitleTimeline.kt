@@ -1,5 +1,7 @@
 package com.zvx.player.data
 
+import com.zvx.player.platform.NativeMediaBridge
+
 /**
  * Applies a millisecond offset to SubRip and WebVTT cue boundaries.
  * Positive offsets move cues later; negative offsets move them earlier.
@@ -11,6 +13,11 @@ object SubtitleTimeline {
 
     fun shift(content: String, offsetMs: Int): String {
         if (offsetMs == 0) return content
+        NativeMediaBridge.shiftSubtitleTimeline(content, offsetMs)?.let { return it }
+        return shiftInKotlin(content, offsetMs)
+    }
+
+    private fun shiftInKotlin(content: String, offsetMs: Int): String {
         return content.lineSequence().joinToString("\n") { line ->
             val match = cueTimingLine.matchEntire(line) ?: return@joinToString line
             val prefix = match.groupValues[1]

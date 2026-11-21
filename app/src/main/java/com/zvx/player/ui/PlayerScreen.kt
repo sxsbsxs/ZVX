@@ -5,8 +5,6 @@ import android.content.ComponentName
 import android.content.pm.ActivityInfo
 import android.content.Context
 import android.content.ContextWrapper
-import android.graphics.BitmapFactory
-import android.media.MediaMetadataRetriever
 import android.content.Intent
 import android.media.AudioManager
 import android.net.Uri
@@ -102,6 +100,7 @@ import com.zvx.player.data.PlaybackSettingsStore
 import com.zvx.player.data.PlaybackPreferences
 import com.zvx.player.data.SubtitleTimeline
 import com.zvx.player.data.MediaEntry
+import com.zvx.player.platform.MediaMetadataProbe
 import com.zvx.player.platform.NativeMediaBridge
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -468,17 +467,18 @@ private fun PlayerScreenContent(
     LaunchedEffect(isAudio, currentMediaIndex, videoUri) {
         if (isAudio) {
             val artworkUri = player.currentMediaItem?.localConfiguration?.uri ?: videoUri
-            audioArtwork = withContext(kotlinx.coroutines.Dispatchers.IO) {
-                runCatching {
-                    val retriever = MediaMetadataRetriever()
-                    try {
-                        retriever.setDataSource(context, artworkUri)
-                        val bytes = retriever.embeddedPicture ?: return@runCatching null
-                        BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
-                    } finally {
-                        retriever.release()
-                    }
-                }.getOrNull()
+            val snapshot = withContext(Dispatchers.IO) {
+                MediaMetadataProbe.inspect(context, artworkUri)
+            }
+            audioArtwork = snapshot?.artwork?.asImageBitmap()
+            if (currentArtist.isBlank() && !snapshot?.artist.isNullOrBlank()) {
+                currentArtist = snapshot?.artist.orEmpty()
+            }
+            if (currentAlbum.isBlank() && !snapshot?.album.isNullOrBlank()) {
+                currentAlbum = snapshot?.album.orEmpty()
+            }
+            if (!snapshot?.title.isNullOrBlank()) {
+                currentTitle = snapshot?.title.orEmpty()
             }
         } else {
             audioArtwork = null

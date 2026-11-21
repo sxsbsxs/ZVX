@@ -18,6 +18,11 @@ def required_files():
         "app/src/main/java/com/zvx/player/data/LibraryPreferencesStore.kt",
         "app/src/main/java/com/zvx/player/data/SubtitleTimeline.kt",
         "app/src/main/java/com/zvx/player/data/PlaybackQueueStore.kt",
+        "app/src/main/java/com/zvx/player/platform/MediaMetadataProbe.java",
+        "app/src/main/cpp/subtitle_timeline.h",
+        "app/src/main/cpp/subtitle_timeline.cpp",
+        "tools/tests/native_subtitle_harness.cpp",
+        "tools/tests/test_native_subtitle.py",
         "app/src/main/java/com/zvx/player/data/AppLanguageStore.kt",
         "app/src/main/java/com/zvx/player/ui/ZvxStrings.kt",
     ]
@@ -34,6 +39,9 @@ def main():
     gradle = (ROOT / "app/build.gradle.kts").read_text()
     java = (ROOT / "app/src/main/java/com/zvx/player/platform/NativeMediaBridge.java").read_text()
     cpp = (ROOT / "app/src/main/cpp/zvx_native.cpp").read_text()
+    native_subtitles = (ROOT / "app/src/main/cpp/subtitle_timeline.cpp").read_text()
+    metadata_java = (ROOT / "app/src/main/java/com/zvx/player/platform/MediaMetadataProbe.java").read_text()
+    metadata_home = (ROOT / "app/src/main/java/com/zvx/player/ui/HomeScreen.kt").read_text()
     kotlin = (ROOT / "app/src/main/java/com/zvx/player/ui/PlayerScreen.kt").read_text()
     manifest = (ROOT / "app/src/main/AndroidManifest.xml").read_text()
     service = (ROOT / "app/src/main/java/com/zvx/player/PlaybackService.kt").read_text()
@@ -41,7 +49,10 @@ def main():
         "CMake builds the native library": "add_library(zvx_native SHARED" in cmake,
         "Gradle configures CMake and the NDK": 'path = file("src/main/cpp/CMakeLists.txt")' in gradle and "abiFilters" in gradle,
         "Java bridge loads the native library": 'System.loadLibrary("zvx_native")' in java,
-        "JNI exports both Java bridge methods": "nativeClampSeekPosition" in cpp and "nativeEngineVersion" in cpp,
+        "JNI exports seek and subtitle operations": "nativeClampSeekPosition" in cpp and "nativeEngineVersion" in cpp and "nativeShiftSubtitleTimeline" in cpp,
+        "C++ subtitle engine is linked into Android native library": "subtitle_timeline.cpp" in cmake and "shiftSubtitleTimeline" in native_subtitles,
+        "Kotlin subtitle delay calls native engine with fallback": "NativeMediaBridge.shiftSubtitleTimeline" in (ROOT / "app/src/main/java/com/zvx/player/data/SubtitleTimeline.kt").read_text() and "shiftInKotlin" in (ROOT / "app/src/main/java/com/zvx/player/data/SubtitleTimeline.kt").read_text(),
+        "Java Android metadata probe is used by library and player": "MediaMetadataRetriever" in metadata_java and "MediaMetadataProbe.inspect" in metadata_home and "MediaMetadataProbe.inspect" in kotlin,
         "Kotlin player calls the Java/C++ seek bridge": "NativeMediaBridge.clampSeekPosition" in kotlin,
         "Player supports double-tap seeking": "onDoubleTap" in kotlin and "−10 seconds" in kotlin and "+10 seconds" in kotlin,
         "Player supports vertical brightness and volume gestures": "detectDragGestures" in kotlin and "screenBrightness" in kotlin and "setStreamVolume" in kotlin,
@@ -70,6 +81,7 @@ def main():
         "Stream and playlist dialogs use language lookup": 'tr("Play from a link", languageCode)' in (ROOT / "app/src/main/java/com/zvx/player/ui/HomeScreen.kt").read_text() and 'tr("Playlist import", languageCode)' in (ROOT / "app/src/main/java/com/zvx/player/ui/HomeScreen.kt").read_text() and 'tr("Unknown size", languageCode)' in (ROOT / "app/src/main/java/com/zvx/player/ui/HomeScreen.kt").read_text(),
         "Queue operations use language lookup": 'tr(if (shuffleEnabled) "Shuffle: on" else "Shuffle: off", languageCode)' in kotlin and 'tr("Repeat: all", languageCode)' in kotlin and 'tr("Move up", languageCode)' in kotlin and 'tr("Playback information", languageCode)' in kotlin,
         "Library settings and accessibility labels follow selected language": 'tr("Default filter", languageCode)' in (ROOT / "app/src/main/java/com/zvx/player/ui/HomeScreen.kt").read_text() and 'tr("Refresh library", languageCode)' in (ROOT / "app/src/main/java/com/zvx/player/ui/HomeScreen.kt").read_text() and 'tr("Selected", languageCode)' in kotlin,
+        "Python compiles and executes native C++ subtitle regression cases": "g++" in (ROOT / "tools/tests/test_native_subtitle.py").read_text() and "test_webvtt_negative_delay_clamps_at_zero_and_keeps_settings" in (ROOT / "tools/tests/test_native_subtitle.py").read_text(),
         "Subtitle delay persists and rewrites external SRT/WebVTT cue times": "subtitleDelayMs" in kotlin and "SubtitleTimeline.shift(content, subtitleDelayMs)" in kotlin and "MimeTypes.APPLICATION_SUBRIP" in kotlin and "MimeTypes.TEXT_VTT" in kotlin and "KEY_SUBTITLE_DELAY" in (ROOT / "app/src/main/java/com/zvx/player/data/PlaybackSettingsStore.kt").read_text(),
     }
     for label, passed in checks.items():
