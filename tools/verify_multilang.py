@@ -19,6 +19,11 @@ def required_files():
         "app/src/main/java/com/zvx/player/data/SubtitleTimeline.kt",
         "app/src/main/java/com/zvx/player/data/PlaybackQueueStore.kt",
         "app/src/main/java/com/zvx/player/platform/MediaMetadataProbe.java",
+        "app/src/main/java/com/zvx/player/platform/NativeAudioProcessor.java",
+        "app/src/main/cpp/audio_dsp.h",
+        "app/src/main/cpp/audio_dsp.cpp",
+        "tools/tests/native_audio_dsp_harness.cpp",
+        "tools/tests/test_native_audio_dsp.py",
         "app/src/main/cpp/subtitle_timeline.h",
         "app/src/main/cpp/subtitle_timeline.cpp",
         "tools/tests/native_subtitle_harness.cpp",
@@ -42,6 +47,10 @@ def main():
     native_subtitles = (ROOT / "app/src/main/cpp/subtitle_timeline.cpp").read_text()
     metadata_java = (ROOT / "app/src/main/java/com/zvx/player/platform/MediaMetadataProbe.java").read_text()
     metadata_home = (ROOT / "app/src/main/java/com/zvx/player/ui/HomeScreen.kt").read_text()
+    audio_dsp = (ROOT / "app/src/main/cpp/audio_dsp.cpp").read_text()
+    audio_dsp_header = (ROOT / "app/src/main/cpp/audio_dsp.h").read_text()
+    audio_processor_java = (ROOT / "app/src/main/java/com/zvx/player/platform/NativeAudioProcessor.java").read_text()
+    native_bridge = java
     kotlin = (ROOT / "app/src/main/java/com/zvx/player/ui/PlayerScreen.kt").read_text()
     manifest = (ROOT / "app/src/main/AndroidManifest.xml").read_text()
     service = (ROOT / "app/src/main/java/com/zvx/player/PlaybackService.kt").read_text()
@@ -51,6 +60,11 @@ def main():
         "Java bridge loads the native library": 'System.loadLibrary("zvx_native")' in java,
         "JNI exports seek and subtitle operations": "nativeClampSeekPosition" in cpp and "nativeEngineVersion" in cpp and "nativeShiftSubtitleTimeline" in cpp,
         "C++ subtitle engine is linked into Android native library": "subtitle_timeline.cpp" in cmake and "shiftSubtitleTimeline" in native_subtitles,
+        "C++ PCM audio DSP is compiled into Android native library": "audio_dsp.cpp" in cmake and "class AudioDsp" in audio_dsp_header and "void AudioDsp::process" in audio_dsp,
+        "Java Media3 processor calls the native PCM engine": "extends BaseAudioProcessor" in audio_processor_java and "NativeMediaBridge.processAudioDsp" in audio_processor_java and "C.ENCODING_PCM_16BIT" in audio_processor_java,
+        "PlaybackService installs native processor in Media3 audio sink": "NativeAudioProcessor(this)" in service and "setAudioProcessors(arrayOf(nativeAudioProcessor))" in service and "ExoPlayer.Builder(this, renderersFactory)" in service,
+        "Audio player exposes persistent native tone profiles": "NativeAudioProcessor.setProfile(context, profile)" in kotlin and "PROFILE_WARM" in kotlin and "PROFILE_VOCAL" in kotlin and "PROFILE_BRIGHT" in kotlin,
+        "JNI bridge exports native audio DSP lifecycle": "nativeCreateAudioDsp" in native_bridge and "nativeProcessAudioDsp" in native_bridge and "nativeReleaseAudioDsp" in native_bridge,
         "Kotlin subtitle delay calls native engine with fallback": "NativeMediaBridge.shiftSubtitleTimeline" in (ROOT / "app/src/main/java/com/zvx/player/data/SubtitleTimeline.kt").read_text() and "shiftInKotlin" in (ROOT / "app/src/main/java/com/zvx/player/data/SubtitleTimeline.kt").read_text(),
         "Java Android metadata probe is used by library and player": "MediaMetadataRetriever" in metadata_java and "MediaMetadataProbe.inspect" in metadata_home and "MediaMetadataProbe.inspect" in kotlin,
         "Kotlin player calls the Java/C++ seek bridge": "NativeMediaBridge.clampSeekPosition" in kotlin,
@@ -82,6 +96,7 @@ def main():
         "Queue operations use language lookup": 'tr(if (shuffleEnabled) "Shuffle: on" else "Shuffle: off", languageCode)' in kotlin and 'tr("Repeat: all", languageCode)' in kotlin and 'tr("Move up", languageCode)' in kotlin and 'tr("Playback information", languageCode)' in kotlin,
         "Library settings and accessibility labels follow selected language": 'tr("Default filter", languageCode)' in (ROOT / "app/src/main/java/com/zvx/player/ui/HomeScreen.kt").read_text() and 'tr("Refresh library", languageCode)' in (ROOT / "app/src/main/java/com/zvx/player/ui/HomeScreen.kt").read_text() and 'tr("Selected", languageCode)' in kotlin,
         "Python compiles and executes native C++ subtitle regression cases": "g++" in (ROOT / "tools/tests/test_native_subtitle.py").read_text() and "test_webvtt_negative_delay_clamps_at_zero_and_keeps_settings" in (ROOT / "tools/tests/test_native_subtitle.py").read_text(),
+        "Python compiles and executes native PCM DSP regression cases": "audio_dsp.cpp" in (ROOT / "tools/tests/test_native_audio_dsp.py").read_text() and "test_warm_vocal_and_bright_profiles_change_pcm_differently" in (ROOT / "tools/tests/test_native_audio_dsp.py").read_text(),
         "Subtitle delay persists and rewrites external SRT/WebVTT cue times": "subtitleDelayMs" in kotlin and "SubtitleTimeline.shift(content, subtitleDelayMs)" in kotlin and "MimeTypes.APPLICATION_SUBRIP" in kotlin and "MimeTypes.TEXT_VTT" in kotlin and "KEY_SUBTITLE_DELAY" in (ROOT / "app/src/main/java/com/zvx/player/data/PlaybackSettingsStore.kt").read_text(),
     }
     for label, passed in checks.items():

@@ -2,6 +2,12 @@ package com.zvx.player.ui
 
 object ZvxStrings {
     private val zh = mapOf(
+        "AUDIO TONE" to "音频音色",
+        "Flat" to "原声",
+        "Warm" to "温暖",
+        "Vocal" to "人声",
+        "Bright" to "明亮",
+        "Tone presets work with decoded 16-bit PCM audio. Encoded passthrough is unchanged." to "音色预设仅处理解码后的 16 位 PCM 音频，编码直通音频不受影响。",
         "Default filter" to "默认筛选",
         "Default sorting" to "默认排序",
         "Playback history" to "播放历史",
@@ -123,6 +129,12 @@ object ZvxStrings {
         "Repeat: all" to "循环：列表", "Repeat: one" to "循环：单曲", "Repeat: off" to "循环：关闭"
     )
     private val ja = mapOf(
+        "AUDIO TONE" to "音質",
+        "Flat" to "フラット",
+        "Warm" to "ウォーム",
+        "Vocal" to "ボーカル",
+        "Bright" to "ブライト",
+        "Tone presets work with decoded 16-bit PCM audio. Encoded passthrough is unchanged." to "音質プリセットはデコード済み 16 ビット PCM 音声に適用されます。エンコード済み音声のパススルーには影響しません。",
         "Default filter" to "既定のフィルター",
         "Default sorting" to "既定の並べ替え",
         "Playback history" to "再生履歴",

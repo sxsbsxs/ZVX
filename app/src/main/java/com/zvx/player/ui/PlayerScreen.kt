@@ -101,6 +101,7 @@ import com.zvx.player.data.PlaybackPreferences
 import com.zvx.player.data.SubtitleTimeline
 import com.zvx.player.data.MediaEntry
 import com.zvx.player.platform.MediaMetadataProbe
+import com.zvx.player.platform.NativeAudioProcessor
 import com.zvx.player.platform.NativeMediaBridge
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -221,6 +222,9 @@ private fun PlayerScreenContent(
     var audioArtwork by remember(videoUri) { mutableStateOf<ImageBitmap?>(null) }
     var seekFeedback by remember(videoUri) { mutableStateOf<String?>(null) }
     var availableTracks by remember(player) { mutableStateOf(player.currentTracks) }
+    var audioToneProfile by remember(context) {
+        mutableIntStateOf(NativeAudioProcessor.getProfile(context))
+    }
     val speeds = listOf(0.75f, 1f, 1.25f, 1.5f, 2f)
     val aspectModeLabels = listOf("Fit", "Fill", "Crop")
     val title = currentTitle
@@ -1036,6 +1040,36 @@ private fun PlayerScreenContent(
                                 }
                             }
                         }
+                    }
+                    if (isAudio) {
+                        Text(tr("AUDIO TONE", languageCode), color = Color(0xFF7F8A78), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            listOf(
+                                NativeAudioProcessor.PROFILE_FLAT to "Flat",
+                                NativeAudioProcessor.PROFILE_WARM to "Warm",
+                                NativeAudioProcessor.PROFILE_VOCAL to "Vocal",
+                                NativeAudioProcessor.PROFILE_BRIGHT to "Bright"
+                            ).forEach { (profile, label) ->
+                                TextButton(onClick = {
+                                    NativeAudioProcessor.setProfile(context, profile)
+                                    audioToneProfile = profile
+                                }) {
+                                    Text(
+                                        tr(label, languageCode),
+                                        color = if (audioToneProfile == profile) Color(0xFFC7F36B) else Color.White,
+                                        fontSize = 11.sp
+                                    )
+                                }
+                            }
+                        }
+                        Text(
+                            tr("Tone presets work with decoded 16-bit PCM audio. Encoded passthrough is unchanged.", languageCode),
+                            color = Color.White.copy(alpha = 0.55f),
+                            fontSize = 10.sp
+                        )
                     }
                     Text(tr("SLEEP TIMER", languageCode), color = Color(0xFF7F8A78), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     Text(

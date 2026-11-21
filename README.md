@@ -23,6 +23,7 @@ A clean, modern Android media player with a modular multi-language foundation.
 - Save the current playback queue and playing item on-device; restore the last queue from the library screen after relaunch.
 - Switch the interface between English, Simplified Chinese and Japanese; language preference is stored locally across library, playlist, stream and playback settings surfaces.
 - Audio-focused presentation with framed album artwork, artist, album and current track position.
+- Four native PCM16 tone presets (Flat, Warm, Vocal and Bright) run in Media3's decoded-audio processing chain; encoded passthrough audio is left unchanged.
 - Video frame sizing modes: Fit, Fill and Crop; foreground playback sleep timer with 15 / 30 / 45 / 60 minute presets.
 - Persist playback speed, aspect mode and subtitle appearance preferences on-device.
 - Background audio playback through Android MediaSessionService with media notification controls; playlist navigation is exposed to system media controls.
@@ -36,12 +37,12 @@ A clean, modern Android media player with a modular multi-language foundation.
 
 | Language | Responsibility | Runtime |
 |---|---|---|
-| Kotlin | Compose interface, app state, MediaStore library, playback orchestration and portable subtitle fallback | Android |
-| Java | Shared Android media-metadata probe (title, artist, album, duration and decoded embedded artwork), plus the JNI facade and native fallback boundary | Android |
-| C++17 | Native SubRip/WebVTT cue-time shifting used by the subtitle-delay feature, plus bounded seek-position calculations | Android NDK |
-| Python 3 | CI architecture checks and host-compiled regression tests that execute the same C++ subtitle engine used by the APK | Development / CI; not bundled into the APK |
+| Kotlin | Compose interface, app state, MediaStore library, playback orchestration and portable subtitle fallback; exposes audio tone selector | Android |
+| Java | Android media metadata/artwork extraction and a Media3 BaseAudioProcessor that passes decoded PCM16 buffers through JNI | Android |
+| C++17 | Runtime three-band PCM tone processing and SRT/WebVTT cue-time shifting, both called by the Android app | Android NDK |
+| Python 3 | CI architecture checks plus host-compiled regression harnesses for the exact C++ subtitle and PCM audio algorithms linked into the APK | Development / CI; not bundled into the APK |
 
-The Android UI and playback orchestration remain Kotlin/Media3 by design. Java owns the shared Android extractor and album-art platform boundary; C++ executes the same subtitle cue-shift operation called by the player; and Python compiles and regression-tests that native parser in CI. Media decoding itself remains on AndroidX Media3: the native parser does not add codecs or replace the playback engine.
+The Android UI and playback orchestration remain Kotlin/Media3 by design. Java owns the Android metadata boundary and installs a Media3 audio processor; decoded 16-bit PCM is processed by the C++ three-band tone engine in the real output path. C++ also handles subtitle cue shifting. Python compiles and regression-tests both native algorithms in CI; it is developer tooling, not an embedded Android runtime. Encoded audio passthrough and formats the processor does not support remain unchanged.
 
 ## Build
 
