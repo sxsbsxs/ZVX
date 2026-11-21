@@ -6,6 +6,8 @@ import android.graphics.BitmapFactory;
 import android.media.MediaMetadataRetriever;
 import android.net.Uri;
 
+import java.io.IOException;
+
 /**
  * Shared Android platform probe for audio metadata and embedded album artwork.
  * Keeps MediaMetadataRetriever lifecycle and defensive artwork decoding in Java.
@@ -50,7 +52,7 @@ public final class MediaMetadataProbe {
         } finally {
             try {
                 retriever.release();
-            } catch (RuntimeException ignored) {
+            } catch (IOException | RuntimeException ignored) {
                 // Release is best-effort if initialization failed.
             }
         }
