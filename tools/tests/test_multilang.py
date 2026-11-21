@@ -82,7 +82,7 @@ class MultiLanguageLayoutTest(unittest.TestCase):
         self.assertIn("Resume last queue", home)
         self.assertIn("onQueueChanged", kotlin)
         self.assertIn("languageCode = languageCode", kotlin)
-        self.assertIn('tr("Shuffle: on", languageCode)', kotlin)
+        self.assertIn('tr(if (shuffleEnabled) "Shuffle: on" else "Shuffle: off", languageCode)', kotlin)
         self.assertIn('tr("Playback information", languageCode)', kotlin)
         self.assertIn("Unknown artist", kotlin)
         self.assertIn("TRACK", kotlin)
