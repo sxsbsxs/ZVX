@@ -1342,6 +1342,7 @@ private fun PlayerScreenContent(
         TrackSelectionDialog(
             tracks = availableTracks,
             languageCode = languageCode,
+            isAudio = isAudio,
             videoQualityAuto = videoQualityAuto,
             onDismiss = { trackDialogVisible = false },
             onVideoAuto = {
@@ -1401,6 +1402,7 @@ private fun PlayerScreenContent(
 private fun TrackSelectionDialog(
     tracks: Tracks,
     languageCode: String,
+    isAudio: Boolean,
     videoQualityAuto: Boolean,
     onDismiss: () -> Unit,
     onVideoAuto: () -> Unit,
@@ -1416,7 +1418,12 @@ private fun TrackSelectionDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(tr("Playback quality & tracks", languageCode), fontWeight = FontWeight.Bold) },
+        title = {
+            Text(
+                tr(if (isAudio) "Audio and subtitles" else "Playback quality & tracks", languageCode),
+                fontWeight = FontWeight.Bold
+            )
+        },
         text = {
             Column(
                 modifier = Modifier
@@ -1424,35 +1431,36 @@ private fun TrackSelectionDialog(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Text(tr("VIDEO QUALITY", languageCode), color = ZvxMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                TrackOption(
-                    label = tr("Auto (recommended)", languageCode),
-                    languageCode = languageCode,
-                    selected = videoQualityAuto,
-                    onClick = onVideoAuto
-                )
-                if (videoGroups.isEmpty()) {
-                    Text(tr("No video tracks reported by this source.", languageCode), color = Color.LightGray, fontSize = 13.sp)
-                } else {
-                    videoGroups.forEach { group ->
-                        val qualityIndices = (0 until group.length).sortedByDescending { index ->
-                            val format = group.getTrackFormat(index)
-                            format.width.toLong().coerceAtLeast(0L) * format.height.toLong().coerceAtLeast(0L)
-                        }
-                        qualityIndices.forEach { index ->
-                            val format = group.getTrackFormat(index)
-                            TrackOption(
-                                label = videoTrackLabel(format, index, languageCode),
-                                languageCode = languageCode,
-                                selected = group.isTrackSelected(index),
-                                enabled = group.isTrackSupported(index),
-                                onClick = { onSelectVideo(group, index) }
-                            )
+                if (!isAudio) {
+                    Text(tr("VIDEO QUALITY", languageCode), color = ZvxMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    TrackOption(
+                        label = tr("Auto (recommended)", languageCode),
+                        languageCode = languageCode,
+                        selected = videoQualityAuto,
+                        onClick = onVideoAuto
+                    )
+                    if (videoGroups.isEmpty()) {
+                        Text(tr("No video tracks reported by this source.", languageCode), color = Color.LightGray, fontSize = 13.sp)
+                    } else {
+                        videoGroups.forEach { group ->
+                            val qualityIndices = (0 until group.length).sortedByDescending { index ->
+                                val format = group.getTrackFormat(index)
+                                format.width.toLong().coerceAtLeast(0L) * format.height.toLong().coerceAtLeast(0L)
+                            }
+                            qualityIndices.forEach { index ->
+                                val format = group.getTrackFormat(index)
+                                TrackOption(
+                                    label = videoTrackLabel(format, languageCode),
+                                    languageCode = languageCode,
+                                    selected = group.isTrackSelected(index),
+                                    enabled = group.isTrackSupported(index),
+                                    onClick = { onSelectVideo(group, index) }
+                                )
+                            }
                         }
                     }
+                    Spacer(Modifier.size(4.dp))
                 }
-
-                Spacer(Modifier.size(4.dp))
                 Text(tr("AUDIO", languageCode), color = ZvxMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 if (audioGroups.isEmpty()) {
                     Text(tr("No audio tracks reported by this source.", languageCode), color = Color.LightGray, fontSize = 13.sp)
@@ -1541,7 +1549,7 @@ private fun TrackOption(
     }
 }
 
-private fun videoTrackLabel(format: Format, index: Int, languageCode: String): String {
+private fun videoTrackLabel(format: Format, languageCode: String): String {
     val resolution = if (format.width > 0 && format.height > 0) {
         "${format.width} × ${format.height}"
     } else {
