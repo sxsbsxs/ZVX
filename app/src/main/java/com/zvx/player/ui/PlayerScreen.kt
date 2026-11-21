@@ -99,6 +99,7 @@ fun PlayerScreen(
     var playbackError by remember(videoUri) { mutableStateOf<String?>(null) }
     var speedIndex by remember(videoUri) { mutableStateOf(1) }
     var trackDialogVisible by remember(videoUri) { mutableStateOf(false) }
+    var seekFeedback by remember(videoUri) { mutableStateOf<String?>(null) }
     var availableTracks by remember(player) { mutableStateOf(player.currentTracks) }
     val speeds = listOf(0.75f, 1f, 1.25f, 1.5f, 2f)
     val title = videoUri.lastPathSegment?.substringAfterLast('/')?.take(64) ?: "Now playing"
@@ -208,10 +209,32 @@ fun PlayerScreen(
         }
     }
 
+    LaunchedEffect(seekFeedback) {
+        if (seekFeedback != null) {
+            delay(800L)
+            seekFeedback = null
+        }
+    }
+
     Box(modifier = modifier.fillMaxSize().background(Color.Black)) {
         AndroidView(
             modifier = Modifier.fillMaxSize().pointerInput(player) {
-                detectTapGestures(onTap = { controlsVisible = !controlsVisible })
+                detectTapGestures(
+                    onTap = { controlsVisible = !controlsVisible },
+                    onDoubleTap = { offset ->
+                        val deltaMs = if (offset.x < size.width / 2f) -10_000L else 10_000L
+                        val mediaDuration = player.duration
+                            .takeIf { it > 0L && it != C.TIME_UNSET } ?: 0L
+                        player.seekTo(
+                            NativeMediaBridge.clampSeekPosition(
+                                player.currentPosition + deltaMs,
+                                mediaDuration
+                            )
+                        )
+                        seekFeedback = if (deltaMs < 0L) "−10 seconds" else "+10 seconds"
+                        controlsVisible = true
+                    }
+                )
             },
             factory = { viewContext ->
                 PlayerView(viewContext).apply {
@@ -226,6 +249,21 @@ fun PlayerScreen(
                 if (view.player !== player) view.player = player
             }
         )
+
+        seekFeedback?.let { feedback ->
+            Surface(
+                modifier = Modifier.align(Alignment.Center),
+                color = Color(0xCC171A1F),
+                shape = RoundedCornerShape(18.dp)
+            ) {
+                Text(
+                    text = feedback,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 22.dp, vertical = 14.dp)
+                )
+            }
+        }
 
         if (isAudio) {
             Column(

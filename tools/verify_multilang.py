@@ -35,6 +35,7 @@ def main():
         "Java bridge loads the native library": 'System.loadLibrary("zvx_native")' in java,
         "JNI exports both Java bridge methods": "nativeClampSeekPosition" in cpp and "nativeEngineVersion" in cpp,
         "Kotlin player calls the Java/C++ seek bridge": "NativeMediaBridge.clampSeekPosition" in kotlin,
+        "Player supports double-tap seeking": "onDoubleTap" in kotlin and "−10 seconds" in kotlin and "+10 seconds" in kotlin,
     }
     for label, passed in checks.items():
         print(f"[{'OK' if passed else 'FAIL'}] {label}")

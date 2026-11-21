@@ -22,6 +22,8 @@ class MultiLanguageLayoutTest(unittest.TestCase):
         self.assertIn("externalNativeBuild", gradle)
         self.assertIn("nativeClampSeekPosition", java)
         self.assertIn("NativeMediaBridge.clampSeekPosition", kotlin)
+        self.assertIn("onDoubleTap", kotlin)
+        self.assertIn("+10 seconds", kotlin)
 
 
 if __name__ == "__main__":

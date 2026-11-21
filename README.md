@@ -12,7 +12,7 @@ A clean, modern Android media player with a modular multi-language foundation.
 - Play direct HTTP and HTTPS video URLs.
 - HLS and MPEG-DASH streaming through Media3 modules.
 - Progressive playback for common media containers when a device has a compatible decoder.
-- Play, pause, seek, skip ±10 seconds and change playback speed (0.75×–2×).
+- Play, pause, seek, skip ±10 seconds with buttons or double-tap left/right on the video, and change playback speed (0.75×–2×).
 - Switch between supported embedded audio tracks and subtitle tracks.
 - Disable embedded subtitles or load an external SRT, VTT, TTML, SSA or ASS subtitle file.
 - Original dark ZVX interface and GitHub Actions debug APK build.
