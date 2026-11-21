@@ -2,7 +2,6 @@ package com.zvx.player
 
 import android.content.Context
 import androidx.media3.common.C
-import androidx.media3.common.Format
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.Tracks
@@ -83,7 +82,7 @@ class PlaybackService : MediaSessionService() {
                     .asSequence()
                     .filter { it.type == C.TRACK_TYPE_VIDEO }
                     .flatMap { group ->
-                        (0 until group.length)
+                        (0 until group.length).asSequence()
                             .filter { group.isTrackSelected(it) }
                             .map { group.getTrackFormat(it) }
                     }

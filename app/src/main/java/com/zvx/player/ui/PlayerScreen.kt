@@ -821,14 +821,10 @@ private fun PlayerScreenContent(
                                     onClick = { showPlayerMenu = false; queueDialogVisible = true }
                                 )
                             }
-                            if (!isAudio) {
-                                DropdownMenuItem(
-                                    text = { Text(tr("Video quality", languageCode)) },
-                                    onClick = { showPlayerMenu = false; trackDialogVisible = true }
-                                )
-                            }
                             DropdownMenuItem(
-                                text = { Text(tr("Audio and subtitles", languageCode)) },
+                                text = {
+                                    Text(tr(if (isAudio) "Audio and subtitles" else "Video quality", languageCode))
+                                },
                                 onClick = { showPlayerMenu = false; trackDialogVisible = true }
                             )
                             DropdownMenuItem(
@@ -1439,7 +1435,11 @@ private fun TrackSelectionDialog(
                     Text(tr("No video tracks reported by this source.", languageCode), color = Color.LightGray, fontSize = 13.sp)
                 } else {
                     videoGroups.forEach { group ->
-                        for (index in 0 until group.length) {
+                        val qualityIndices = (0 until group.length).sortedByDescending { index ->
+                            val format = group.getTrackFormat(index)
+                            format.width.toLong().coerceAtLeast(0L) * format.height.toLong().coerceAtLeast(0L)
+                        }
+                        qualityIndices.forEach { index ->
                             val format = group.getTrackFormat(index)
                             TrackOption(
                                 label = videoTrackLabel(format, index, languageCode),
