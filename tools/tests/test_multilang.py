@@ -24,6 +24,9 @@ class MultiLanguageLayoutTest(unittest.TestCase):
         self.assertIn("NativeMediaBridge.clampSeekPosition", kotlin)
         self.assertIn("onDoubleTap", kotlin)
         self.assertIn("+10 seconds", kotlin)
+        self.assertIn("detectDragGestures", kotlin)
+        self.assertIn("setStreamVolume", kotlin)
+        self.assertIn("attributes.screenBrightness = originalScreenBrightness", kotlin)
 
 
 if __name__ == "__main__":

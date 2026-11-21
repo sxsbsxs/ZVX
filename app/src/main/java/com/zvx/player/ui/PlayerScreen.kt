@@ -1,11 +1,16 @@
 package com.zvx.player.ui
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import android.content.Intent
+import android.media.AudioManager
 import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -70,6 +75,7 @@ import androidx.media3.ui.PlayerView
 import com.zvx.player.data.PlaybackProgressStore
 import com.zvx.player.platform.NativeMediaBridge
 import kotlinx.coroutines.delay
+import kotlin.math.roundToInt
 
 @Composable
 fun PlayerScreen(
@@ -79,6 +85,9 @@ fun PlayerScreen(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
+    val activity = remember(context) { context.findActivity() }
+    val audioManager = remember(context) { context.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
+    val originalScreenBrightness = remember(activity) { activity?.window?.attributes?.screenBrightness ?: -1f }
     val savedPosition = remember(videoUri) {
         PlaybackProgressStore.getPosition(context, videoUri.toString())
     }
@@ -151,6 +160,16 @@ fun PlayerScreen(
     }
 
     BackHandler { onBack() }
+
+    DisposableEffect(activity) {
+        onDispose {
+            activity?.window?.let { window ->
+                val attributes = window.attributes
+                attributes.screenBrightness = originalScreenBrightness
+                window.attributes = attributes
+            }
+        }
+    }
 
     DisposableEffect(player) {
         val listener = object : Player.Listener {
@@ -249,6 +268,53 @@ fun PlayerScreen(
                 if (view.player !== player) view.player = player
             }
         )
+
+        if (!isAudio) {
+            Box(
+                modifier = Modifier.fillMaxSize().pointerInput(player, activity, audioManager) {
+                    var activeSide = 0
+                    var brightnessValue = 0.5f
+                    var startVolume = 0
+                    var volumeAdjustment = 0f
+                    var maxVolume = 1
+
+                    detectDragGestures(
+                        onDragStart = { offset ->
+                            activeSide = if (offset.x < size.width / 2f) 0 else 1
+                            if (activeSide == 0) {
+                                brightnessValue = activity?.window?.attributes?.screenBrightness
+                                    ?.takeIf { it >= 0f } ?: 0.5f
+                            } else {
+                                startVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+                                maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC).coerceAtLeast(1)
+                                volumeAdjustment = 0f
+                            }
+                            controlsVisible = false
+                        },
+                        onDragEnd = { controlsVisible = true },
+                        onDragCancel = { controlsVisible = true }
+                    ) { change, dragAmount ->
+                        change.consume()
+                        val verticalFraction = -dragAmount.y / size.height.coerceAtLeast(1).toFloat()
+                        if (activeSide == 0) {
+                            val window = activity?.window
+                            if (window != null) {
+                                brightnessValue = (brightnessValue + verticalFraction * 1.35f).coerceIn(0.02f, 1f)
+                                val attributes = window.attributes
+                                attributes.screenBrightness = brightnessValue
+                                window.attributes = attributes
+                                seekFeedback = "Brightness " + (brightnessValue * 100).roundToInt() + "%"
+                            }
+                        } else {
+                            volumeAdjustment += verticalFraction * maxVolume * 2f
+                            val targetVolume = (startVolume + volumeAdjustment.roundToInt()).coerceIn(0, maxVolume)
+                            audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, targetVolume, 0)
+                            seekFeedback = "Volume " + (targetVolume * 100f / maxVolume).roundToInt() + "%"
+                        }
+                    }
+                }
+            )
+        }
 
         seekFeedback?.let { feedback ->
             Surface(
@@ -656,4 +722,11 @@ private fun formatTime(milliseconds: Long): String {
     } else {
         "%02d:%02d".format(totalSeconds / 60L, seconds)
     }
+}
+
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
 }
